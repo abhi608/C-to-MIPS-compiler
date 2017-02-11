@@ -1,9 +1,15 @@
+int r=3;
+int y=r+1;
+int t = 2*3;
+int x = !0;
 enum suit {
     club = 0,
     diamonds = 10,
     hearts = 20,
     spades = 3,
 };
+int x= suit.club;
+char char_const = 'b';
 const int a =1;
 static int qwerty=21;
 extern int abc;
