@@ -11,7 +11,7 @@ __all__ = ['c_lexer', 'c_parser', 'c_ast']
 __version__ = '2.17'
 
 from subprocess import Popen, PIPE
-from .c_parser import CParser
+from c_parser import CParser
 
 
 def preprocess_file(filename, cpp_path='cpp', cpp_args=''):

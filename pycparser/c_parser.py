@@ -7,14 +7,19 @@
 # License: BSD
 #------------------------------------------------------------------------------
 import re
+import pydot
 
-from .ply import yacc
+from ply import yacc
 
-from . import c_ast
-from .c_lexer import CLexer
-from .plyparser import PLYParser, Coord, ParseError
-from .ast_transforms import fix_switch_cases
+import c_ast
+from c_lexer import CLexer
+from plyparser import PLYParser, Coord, ParseError
+from ast_transforms import fix_switch_cases
 
+graph = pydot.Dot(graph_type='digraph')
+graph.add_node(pydot.Node('literal_0_0', label='0'))
+
+counter = 0
 
 class CParser(PLYParser):
     def __init__(
@@ -22,7 +27,7 @@ class CParser(PLYParser):
             lex_optimize=True,
             lexer=CLexer,
             lextab='pycparser.lextab',
-            yacc_optimize=True,
+            yacc_optimize=False,
             yacctab='pycparser.yacctab',
             yacc_debug=False,
             taboutputdir=''):
@@ -75,6 +80,8 @@ class CParser(PLYParser):
                 Set this parameter to control the location of generated
                 lextab and yacctab files.
         """
+
+        global counter
         self.clex = lexer(
             error_func=self._lex_error_func,
             on_lbrace_func=self._lex_on_lbrace_func,
@@ -506,17 +513,43 @@ class CParser(PLYParser):
         """ translation_unit_or_empty   : translation_unit
                                         | empty
         """
+        print "HOLA"
+        global counter
         if p[1] is None:
             p[0] = c_ast.FileAST([])
+            graph.add_node(pydot.Node('node_'+str(counter), label='empty'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='translation_unit_or_empty'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            p[0].ref = 'node_'+str(counter-1)
         else:
             p[0] = c_ast.FileAST(p[1])
+            graph.add_node(pydot.Node('node_'+str(counter), label='translation_unit'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='translation_unit_or_empty'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            p[0].ref = 'node_'+str(counter-1)
 
     def p_translation_unit_1(self, p):
         """ translation_unit    : external_declaration
         """
         # Note: external_declaration is already a list
         #
+        global counter
         p[0] = p[1]
+        length = len(p[1]);
+        
+        # print "TYPE: ", p[1]
+        # graph.add_node(pydot.Node('node_'+str(counter), label='translation_unit'))
+        # counter = counter+1
+        # edge = pydot.Edge('node_'+str(counter), p[1][length-1])
+        # graph.add_edge(edge)
+        # p[0][length-1] = 'node_'+str(counter-1)
+
 
     def p_translation_unit_2(self, p):
         """ translation_unit    : translation_unit external_declaration
@@ -534,6 +567,7 @@ class CParser(PLYParser):
         """ external_declaration    : function_definition
         """
         p[0] = [p[1]]
+        print "NISHIT: ", type(p[1])
 
     def p_external_declaration_2(self, p):
         """ external_declaration    : declaration
@@ -549,7 +583,16 @@ class CParser(PLYParser):
     def p_external_declaration_4(self, p):
         """ external_declaration    : SEMI
         """
+        # print "HOQWEE"
+        global counter
         p[0] = None
+        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='external_declaration'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0] = 'ref/node_'+str(counter-1);
 
     def p_pp_directive(self, p):
         """ pp_directive  : PPHASH
@@ -561,10 +604,29 @@ class CParser(PLYParser):
         """ pppragma_directive      : PPPRAGMA
                                     | PPPRAGMA PPPRAGMASTR
         """
+        global counter
         if len(p) == 3:
             p[0] = c_ast.Pragma(p[2], self._coord(p.lineno(2)))
+            graph.add_node(pydot.Node('node_'+str(counter), label='PPPRAGMA'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='PPPRAGMASTR'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='pppragma_directive'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            p[0].ref = 'node_'+str(counter-1)
         else:
             p[0] = c_ast.Pragma("", self._coord(p.lineno(1)))
+            graph.add_node(pydot.Node('node_'+str(counter), label='PPPRAGMA'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='pppragma_directive'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            p[0].ref = 'node_'+str(counter-1)
 
     # In function definitions, the declarator can be followed by
     # a declaration list, for old "K&R style" function definitios.
@@ -580,11 +642,28 @@ class CParser(PLYParser):
                                        coord=self._coord(p.lineno(1)))],
             function=[])
 
+        global counter
         p[0] = self._build_function_definition(
             spec=spec,
             decl=p[1],
             param_decls=p[2],
             body=p[3])
+        graph.add_node(pydot.Node('node_'+str(counter), label='declarator'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='declaration_list_opt'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='compound_statement'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='function_definition'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref
+
 
     def p_function_definition_2(self, p):
         """ function_definition : declaration_specifiers declarator declaration_list_opt compound_statement
@@ -606,7 +685,17 @@ class CParser(PLYParser):
                         | jump_statement
                         | pppragma_directive
         """
+        # print "HOOOOLALAALALLALALALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         p[0] = p[1]
+        # print "gfgffffffffffffffffffffffffffffffffffffffffffffffffgggggggggggggggggggggg"
+        # graph.add_node(pydot.Node('node_3', label='statement'))
+        # graph.add_node(pydot.Node('node_4', label='xyz'))
+        # edge = pydot.Edge("node_3", "node_4")
+        # graph.add_edge(edge)
+        # print type(p[0])
+        # print p[0].;
+        # p[0].ref = 'qwerty'
+        # print p[0].ref;
 
     # In C, declarations can come several in a line:
     #   int x, *px, romulo = 5;
@@ -718,12 +807,41 @@ class CParser(PLYParser):
                                     | EXTERN
                                     | TYPEDEF
         """
+        global counter
         p[0] = p[1]
+        # print "TEST@@@@: ", p[1];
+        if p[0] == 'auto':
+            graph.add_node(pydot.Node('node_'+str(counter), label='AUTO'))
+        elif p[0] == 'register':
+            graph.add_node(pydot.Node('node_'+str(counter), label='REGISTER'))
+        elif p[0] == 'static':
+            graph.add_node(pydot.Node('node_'+str(counter), label='STATIC'))
+        elif p[0] == 'extern':
+            graph.add_node(pydot.Node('node_'+str(counter), label='EXTERN'))
+        else:
+            graph.add_node(pydot.Node('node_'+str(counter), label='TYPEDEF'))
+        
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='storage_class_specifier'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0] = p[0] + '/node_' + str(counter-1);
+
 
     def p_function_specifier(self, p):
         """ function_specifier  : INLINE
         """
+        global counter
         p[0] = p[1]
+        graph.add_node(pydot.Node('node_'+str(counter), label='INLINE'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='function_specifier'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0] = p[0] + '/node_' + str(counter-1);
+
 
     def p_type_specifier_1(self, p):
         """ type_specifier  : VOID
@@ -739,7 +857,40 @@ class CParser(PLYParser):
                             | UNSIGNED
                             | __INT128
         """
+        global counter
         p[0] = c_ast.IdentifierType([p[1]], coord=self._coord(p.lineno(1)))
+        if p[0] == 'void':
+            graph.add_node(pydot.Node('node_'+str(counter), label='VOID'))
+        elif p[0] == '_Bool':
+            graph.add_node(pydot.Node('node_'+str(counter), label='_BOOL'))
+        elif p[0] == 'char':
+            graph.add_node(pydot.Node('node_'+str(counter), label='CHAR'))
+        elif p[0] == 'short':
+            graph.add_node(pydot.Node('node_'+str(counter), label='SHORT'))
+        elif p[0] == 'int':
+            graph.add_node(pydot.Node('node_'+str(counter), label='INT'))
+        elif p[0] == 'long':
+            graph.add_node(pydot.Node('node_'+str(counter), label='LONG'))
+        elif p[0] == 'float':
+            graph.add_node(pydot.Node('node_'+str(counter), label='FLOAT'))
+        elif p[0] == 'double':
+            graph.add_node(pydot.Node('node_'+str(counter), label='DOUBLE'))
+        elif p[0] == '_Complex':
+            graph.add_node(pydot.Node('node_'+str(counter), label='_COMPLEX'))
+        elif p[0] == 'signed':
+            graph.add_node(pydot.Node('node_'+str(counter), label='SIGNED'))
+        elif p[0] == 'unsigned':
+            graph.add_node(pydot.Node('node_'+str(counter), label='UNSIGNED'))
+        else:
+            graph.add_node(pydot.Node('node_'+str(counter), label='_INT128'))
+
+        counter = counter + 1
+        graph.add_node(pydot.Node('node_'+str(counter), label='type_specifier'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = "node_"+str(counter-1)
+        # print "TEDSTKJJ ", p[1]
 
     def p_type_specifier_2(self, p):
         """ type_specifier  : typedef_name
@@ -753,7 +904,21 @@ class CParser(PLYParser):
                             | RESTRICT
                             | VOLATILE
         """
+        global counter
         p[0] = p[1]
+        if p[0] == 'const':
+            graph.add_node(pydot.Node('node_'+str(counter), label='CONST'))
+        elif p[0] == 'restrict':
+            graph.add_node(pydot.Node('node_'+str(counter), label='RESTRICT'))
+        else:
+            graph.add_node(pydot.Node('node_'+str(counter), label='VOLATILE'))
+        counter = counter + 1
+        graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0] = p[0] + '/node_' + str(counter-1)
+        # print "TERSR ",p[1];
 
     def p_init_declarator_list_1(self, p):
         """ init_declarator_list    : init_declarator
@@ -902,7 +1067,15 @@ class CParser(PLYParser):
     def p_struct_declaration_3(self, p):
         """ struct_declaration : SEMI
         """
+        global counter
         p[0] = None
+        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0] = 'ref/node_'+str(counter-1);
 
     def p_struct_declarator_list(self, p):
         """ struct_declarator_list  : struct_declarator
@@ -931,7 +1104,20 @@ class CParser(PLYParser):
         """ enum_specifier  : ENUM ID
                             | ENUM TYPEID
         """
+        global counter
         p[0] = c_ast.Enum(p[2], None, self._coord(p.lineno(1)))
+        graph.add_node(pydot.Node('node_'+str(counter), label='ENUM'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='ID/TYPEID'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='enum_specifier'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = "node_"+str(counter-1)
+        print "QWERTY: ", p[2]
 
     def p_enum_specifier_2(self, p):
         """ enum_specifier  : ENUM brace_open enumerator_list brace_close
@@ -961,10 +1147,18 @@ class CParser(PLYParser):
         """ enumerator  : ID
                         | ID EQUALS constant_expression
         """
+        global counter
         if len(p) == 2:
             enumerator = c_ast.Enumerator(
                         p[1], None,
                         self._coord(p.lineno(1)))
+            graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='enumerator'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+
         else:
             enumerator = c_ast.Enumerator(
                         p[1], p[3],
@@ -972,6 +1166,7 @@ class CParser(PLYParser):
         self._add_identifier(enumerator.name, enumerator.coord)
 
         p[0] = enumerator
+        p[0].ref = 'node_' + str(counter-1)
 
     def p_declarator_1(self, p):
         """ declarator  : direct_declarator
@@ -1001,11 +1196,19 @@ class CParser(PLYParser):
     def p_direct_declarator_1(self, p):
         """ direct_declarator   : ID
         """
+        global counter
         p[0] = c_ast.TypeDecl(
             declname=p[1],
             type=None,
             quals=None,
             coord=self._coord(p.lineno(1)))
+        graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = 'node_' + str(counter-1)
 
     def p_direct_declarator_2(self, p):
         """ direct_declarator   : LPAREN declarator RPAREN
@@ -1022,7 +1225,8 @@ class CParser(PLYParser):
             type=None,
             dim=p[4] if len(p) > 5 else p[3],
             dim_quals=quals,
-            coord=p[1].coord)
+            coord=p[1].coord,
+            ref = 'tmp')
 
         p[0] = self._type_modify_decl(decl=p[1], modifier=arr)
 
@@ -1197,6 +1401,7 @@ class CParser(PLYParser):
         """ initializer : assignment_expression
         """
         p[0] = p[1]
+        print p[0]
 
     def p_initializer_2(self, p):
         """ initializer : brace_open initializer_list_opt brace_close
@@ -1311,11 +1516,27 @@ class CParser(PLYParser):
     def p_direct_abstract_declarator_5(self, p):
         """ direct_abstract_declarator  : LBRACKET TIMES RBRACKET
         """
+        global counter
         p[0] = c_ast.ArrayDecl(
             type=c_ast.TypeDecl(None, None, None),
             dim=c_ast.ID(p[3], self._coord(p.lineno(3))),
             dim_quals=[],
             coord=self._coord(p.lineno(1)))
+        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = 'node_' + str(counter-1)
 
     def p_direct_abstract_declarator_6(self, p):
         """ direct_abstract_declarator  : direct_abstract_declarator LPAREN parameter_type_list_opt RPAREN
@@ -1693,7 +1914,7 @@ class CParser(PLYParser):
         """ brace_open  :   LBRACE
         """
         p[0] = p[1]
-        p.set_lineno(0, p.lineno(1))
+        p.set_lineno(0, p.lineno(1))    
 
     def p_brace_close(self, p):
         """ brace_close :   RBRACE
@@ -1722,16 +1943,29 @@ class CParser(PLYParser):
 if __name__ == "__main__":
     import pprint
     import time, sys
+    from __init__ import preprocess_file
+    from __init__ import parse_file
+    # from pycparser import preprocess_file
 
-    #t1 = time.time()
-    #parser = CParser(lex_optimize=True, yacc_debug=True, yacc_optimize=False)
-    #sys.write(time.time() - t1)
+    t1 = time.time()
+    parser = CParser(lex_optimize=False, yacc_debug=True, yacc_optimize=False)
+    sys.stdout.write(str(time.time() - t1) + '\n')
+    filename = 'year.c'
+    # text1 = preprocess_file(filename, cpp_path='cpp', cpp_args=r'-Iutils/fake_libc_include')
+    with open(filename, 'rU') as f:
+        text = f.read()
 
-    #buf = '''
-        #int (*k)(int);
-    #'''
+    buf = '''
+        int (*k)(int);
+    '''
 
-    ## set debuglevel to 2 for debugging
-    #t = parser.parse(buf, 'x.c', debuglevel=0)
-    #t.show(showcoord=True)
+    # set debuglevel to 2 for debugging
+    t = parser.parse(text, filename, debuglevel=0)
+    t.show()
+
+    # ast = parse_file(filename, use_cpp=True,
+    #         cpp_path='cpp',
+    #         cpp_args=r'-Iutils/fake_libc_include')
+    # ast.show(showcoord=True)
+    graph.write_png('test1.png')
 

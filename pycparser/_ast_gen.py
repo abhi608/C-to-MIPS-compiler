@@ -51,6 +51,7 @@ class ASTCodeGenerator(object):
                     raise RuntimeError("Invalid line in %s:\n%s\n" % (filename, line))
 
                 name = line[:colon_i]
+                print "name ", name
                 val = line[lbracket_i + 1:rbracket_i]
                 vallist = [v.strip() for v in val.split(',')] if val else []
                 yield name, vallist
@@ -93,17 +94,19 @@ class NodeCfg(object):
         if self.all_entries:
             args = ', '.join(self.all_entries)
             slots = ', '.join("'{0}'".format(e) for e in self.all_entries)
-            slots += ", 'coord', '__weakref__'"
-            arglist = '(self, %s, coord=None)' % args
+            slots += ", 'coord', '__weakref__', 'ref'"
+            arglist = '(self, %s, coord=None, ref="tmp")' % args
         else:
-            slots = "'coord', '__weakref__'"
-            arglist = '(self, coord=None)'
+            slots = "'coord', '__weakref__', 'ref'"
+            arglist = '(self, coord=None, ref="tmp")'
 
         src += "    __slots__ = (%s)\n" % slots
         src += "    def __init__%s:\n" % arglist
 
         for name in self.all_entries + ['coord']:
+            # print "NAME: ", name
             src += "        self.%s = %s\n" % (name, name)
+        src += "        self.%s = %s\n" % ('ref', 'ref')
 
         return src
 

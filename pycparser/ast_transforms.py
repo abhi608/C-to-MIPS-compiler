@@ -7,7 +7,7 @@
 # License: BSD
 #------------------------------------------------------------------------------
 
-from . import c_ast
+import c_ast
 
 
 def fix_switch_cases(switch_node):
