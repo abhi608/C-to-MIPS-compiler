@@ -1267,26 +1267,96 @@ class CParser(PLYParser):
         """ enum_specifier  : ENUM brace_open enumerator_list brace_close
         """
         p[0] = c_ast.Enum(None, p[3], self._coord(p.lineno(1)))
+        global counter
+        tmp_node1 = p[2].split("/")
+        p[2] = tmp_node1[0]
+        tmp_node2 = p[4].split("/")
+        p[4] = tmp_node2[0]
+        graph.add_node(pydot.Node('node_'+str(counter), label='ENUM'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='enum_specifier'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1]) 
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1]) 
+        graph.add_edge(edge)
+        p[0].ref = "node_" + str(counter-1)
+        
 
     def p_enum_specifier_3(self, p):
         """ enum_specifier  : ENUM ID brace_open enumerator_list brace_close
                             | ENUM TYPEID brace_open enumerator_list brace_close
         """
         p[0] = c_ast.Enum(p[2], p[4], self._coord(p.lineno(1)))
+        global counter
+        tmp_node1 = p[3].split("/")
+        p[3] = tmp_node1[0]
+        tmp_node2 = p[5].split("/")
+        p[5] = tmp_node2[0]
+        
+        graph.add_node(pydot.Node('node_'+str(counter), label='ENUM'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='ID / TYPEID'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='enum_specifier'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1]) 
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1]) 
+        graph.add_edge(edge)
+        p[0].ref = "node_" + str(counter-1)
+                
 
     def p_enumerator_list(self, p):
         """ enumerator_list : enumerator
                             | enumerator_list COMMA
                             | enumerator_list COMMA enumerator
         """
+        global counter
         if len(p) == 2:
             p[0] = c_ast.EnumeratorList([p[1]], p[1].coord)
+            graph.add_node(pydot.Node('node_'+str(counter), label='enumerator_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+            graph.add_edge(edge)
+            
         elif len(p) == 3:
             p[0] = p[1]
+            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='enumerator_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            
         else:
             p[1].enumerators.append(p[3])
             p[0] = p[1]
+            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='enumerator_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+            graph.add_edge(edge)
+        p[0].ref = "node_" + str(counter-1)
 
+            
     def p_enumerator(self, p):
         """ enumerator  : ID
                         | ID EQUALS constant_expression
@@ -1307,6 +1377,19 @@ class CParser(PLYParser):
             enumerator = c_ast.Enumerator(
                         p[1], p[3],
                         self._coord(p.lineno(1)))
+            graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='EQUALS'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='enumerator'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+            graph.add_edge(edge)
+
         self._add_identifier(enumerator.name, enumerator.coord)
 
         p[0] = enumerator
@@ -1316,12 +1399,26 @@ class CParser(PLYParser):
         """ declarator  : direct_declarator
         """
         p[0] = p[1]
-
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='declarator'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        p[0].ref = "node_" + str(counter-1)
+        
     def p_declarator_2(self, p):
         """ declarator  : pointer direct_declarator
         """
         p[0] = self._type_modify_decl(p[2], p[1])
-
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='declarator'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        graph.add_edge(edge)
+        p[0].ref = "node_" + str(counter-1)
+        
     # Since it's impossible for a type to be specified after a pointer, assume
     # it's intended to be the name for this declaration.  _add_identifier will
     # raise an error if this TYPEID can't be redeclared.
@@ -1336,7 +1433,17 @@ class CParser(PLYParser):
             coord=self._coord(p.lineno(2)))
 
         p[0] = self._type_modify_decl(decl, p[1])
-
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='TYPEID'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='declarator'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = "node_" + str(counter-1)
+        
     def p_direct_declarator_1(self, p):
         """ direct_declarator   : ID
         """
