@@ -23,9 +23,11 @@ if __name__ == "__main__":
 	if len(sys.argv) > 1:
 		filename  = sys.argv[1]
 	else:
-		filename = 'examples/c_files/year.c'
-	ast = parse_file(filename, use_cpp=True,
+		filename = 'examples/c_files/text2.c'
+	ast, graph_returned = parse_file(filename, use_cpp=True,
             cpp_path='cpp',
-            cpp_args=r'-Iutils/fake_libc_include')
-	graph.write_png('test2.png')
+            cpp_args=r'-Iutils/fake_libc_include',
+            graph=graph)
+	if graph_returned is not None:
+		graph_returned.write_png('test2.png')
 	# ast.show(showcoord=True)

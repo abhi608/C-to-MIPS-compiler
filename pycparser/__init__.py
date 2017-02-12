@@ -52,7 +52,7 @@ def preprocess_file(filename, cpp_path='cpp', cpp_args=''):
 
 
 def parse_file(filename, use_cpp=False, cpp_path='cpp', cpp_args='',
-               parser=None):
+               parser=None, graph=None):
     """ Parse a C file using pycparser.
 
         filename:
@@ -89,5 +89,5 @@ def parse_file(filename, use_cpp=False, cpp_path='cpp', cpp_args='',
             text = f.read()
 
     if parser is None:
-        parser = CParser()
+        parser = CParser(graph=graph)
     return parser.parse(text, filename)

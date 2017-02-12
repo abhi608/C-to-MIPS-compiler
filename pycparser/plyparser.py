@@ -7,7 +7,7 @@
 # Eli Bendersky [http://eli.thegreenplace.net]
 # License: BSD
 #-----------------------------------------------------------------
-
+tmp = -1;
 
 class Coord(object):
     """ Coordinates of a syntactic element. Consists of:
@@ -29,21 +29,37 @@ class Coord(object):
 
 class ParseError(Exception): pass
 
-
+import pydot 
 class PLYParser(object):
-    def _create_opt_rule(self, rulename):
+    def _create_opt_rule(self, rulename, counter):
         """ Given a rule name, creates an optional ply.yacc rule
             for it. The name of the optional rule is
             <rulename>_opt
         """
         optname = rulename + '_opt'
-
+        global tmp
         def optrule(self, p):
+            global tmp
             p[0] = p[1]
+            self.graph.add_node(pydot.Node('node_'+str(counter), label=optname))
+            if isinstance(p[1], list):
+                length = len(p[1])
+                edge = pydot.Edge("node_"+str(counter), p[1][length-1])
+                p[0].append("node_" + str(counter))
+            elif p[1] is not None:
+                edge = pydot.Edge("node_"+str(counter), p[1].ref)
+                p[0].ref = "node_" + str(counter)
+            else:
+                self.graph.add_node(pydot.Node('node_'+str(tmp), label="Empty"))
+                tmp = tmp-1;
+                edge = pydot.Edge("node_"+str(counter), 'node_'+str(tmp+1))
+            self.graph.add_edge(edge)
 
+        counter = counter + 1
         optrule.__doc__ = '%s : empty\n| %s' % (optname, rulename)
         optrule.__name__ = 'p_%s' % optname
         setattr(self.__class__, optrule.__name__, optrule)
+        return counter
 
     def _coord(self, lineno, column=None):
         return Coord(

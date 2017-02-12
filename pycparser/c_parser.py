@@ -16,7 +16,7 @@ from c_lexer import CLexer
 from plyparser import PLYParser, Coord, ParseError
 from ast_transforms import fix_switch_cases
 
-graph = pydot.Dot(graph_type='digraph')
+# graph = pydot.Dot(graph_type='digraph')
 
 counter = 0
 
@@ -29,7 +29,8 @@ class CParser(PLYParser):
             yacc_optimize=False,
             yacctab='pycparser.yacctab',
             yacc_debug=False,
-            taboutputdir=''):
+            taboutputdir='',
+            graph=None):
         """ Create a new CParser.
 
             Some arguments for controlling the debug/optimization
@@ -81,6 +82,7 @@ class CParser(PLYParser):
         """
 
         global counter
+        self.graph = graph
         self.clex = lexer(
             error_func=self._lex_error_func,
             on_lbrace_func=self._lex_on_lbrace_func,
@@ -109,9 +111,9 @@ class CParser(PLYParser):
             'type_qualifier_list',
             'struct_declarator_list'
         ]
-
+        global counter
         for rule in rules_with_opt:
-            self._create_opt_rule(rule)
+            counter = self._create_opt_rule(rule, counter)
 
         self.cparser = yacc.yacc(
             module=self,
@@ -154,7 +156,7 @@ class CParser(PLYParser):
         return self.cparser.parse(
                 input=text,
                 lexer=self.clex,
-                debug=debuglevel)
+                debug=debuglevel), self.graph
 
     ######################--   PRIVATE   --######################
 
@@ -525,20 +527,20 @@ class CParser(PLYParser):
         global counter
         if p[1] is None:
             p[0] = c_ast.FileAST([])
-            graph.add_node(pydot.Node('node_'+str(counter), label='empty'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='empty'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='translation_unit_or_empty'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='translation_unit_or_empty'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = 'node_'+str(counter-1)
         else:
             x = p[1].pop()
             p[0] = c_ast.FileAST(p[1])
-            graph.add_node(pydot.Node('node_'+str(counter), label='translation_unit_or_empty'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='translation_unit_or_empty'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), x)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = 'node_'+str(counter-1)
 
     def p_translation_unit_1(self, p):
@@ -549,10 +551,10 @@ class CParser(PLYParser):
         global counter
         p[0] = p[1]
         length = len(p[1]);
-        graph.add_node(pydot.Node('node_'+str(counter), label='translation_unit'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='translation_unit'))
         counter = counter+1
         edge = pydot.Edge('node_'+str(counter-1), p[1][length-1])
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0][length-1] = 'node_'+str(counter-1)
 
 
@@ -565,12 +567,12 @@ class CParser(PLYParser):
             p[1].extend(p[2])
         p[0] = p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='translation_unit'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='translation_unit'))
         counter = counter+1
         edge = pydot.Edge('node_'+str(counter-1), x)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge('node_'+str(counter-1), y)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].append('node_'+str(counter-1)) 
 
     # Declarations always come as lists (because they can be
@@ -583,10 +585,10 @@ class CParser(PLYParser):
         """
         global counter
         p[0] = [p[1]]
-        graph.add_node(pydot.Node('node_'+str(counter), label='external_declaration'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='external_declaration'))
         counter = counter+1
         edge = pydot.Edge('node_'+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].append('node_'+str(counter-1)) 
 
     def p_external_declaration_2(self, p):
@@ -596,10 +598,10 @@ class CParser(PLYParser):
         p[0] = p[1]
 
         length = len(p[1])
-        graph.add_node(pydot.Node('node_'+str(counter), label='external_declaration'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='external_declaration'))
         counter = counter+1
         edge = pydot.Edge('node_'+str(counter-1), p[1][length-1])
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0][length-1] = 'node_'+str(counter-1)
 
     def p_external_declaration_3(self, p):
@@ -616,12 +618,12 @@ class CParser(PLYParser):
         # print "HOQWEE"
         global counter
         p[0] = None
-        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='external_declaration'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='external_declaration'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0] = ['@node_'+str(counter-1)];
 
     def p_pp_directive(self, p):
@@ -637,25 +639,25 @@ class CParser(PLYParser):
         global counter
         if len(p) == 3:
             p[0] = c_ast.Pragma(p[2], self._coord(p.lineno(2)))
-            graph.add_node(pydot.Node('node_'+str(counter), label='PPPRAGMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='PPPRAGMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='PPPRAGMASTR'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='PPPRAGMASTR'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='pppragma_directive'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='pppragma_directive'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = 'node_'+str(counter-1)
         else:
             p[0] = c_ast.Pragma("", self._coord(p.lineno(1)))
-            graph.add_node(pydot.Node('node_'+str(counter), label='PPPRAGMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='PPPRAGMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='pppragma_directive'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='pppragma_directive'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = 'node_'+str(counter-1)
 
     # In function definitions, the declarator can be followed by
@@ -679,16 +681,20 @@ class CParser(PLYParser):
             param_decls=p[2],
             body=p[3])
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='declaration_list_opt'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='function_definition'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='function_definition'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_" + str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
         
         
@@ -706,18 +712,22 @@ class CParser(PLYParser):
             param_decls=p[3],
             body=p[4])
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='declaration_list_opt'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='function_definition'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='function_definition'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_" + str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[3], list):
+            length = len(p[3])
+            edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif p[3] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
 
         print "fucntion definitoon 2", type(p[0]), type(p[1]), type(p[2]), type(p[3])
@@ -733,10 +743,10 @@ class CParser(PLYParser):
         # print "HOOOOLALAALALLALALALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         p[0] = p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='statement'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
 
         
@@ -795,14 +805,18 @@ class CParser(PLYParser):
 
         p[0] = decls
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator_list_opt'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='decl_body'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='decl_body'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_" + str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         p[0].append("node_" + str(counter-1))
 
 
@@ -827,14 +841,14 @@ class CParser(PLYParser):
         p[0] = p[1]
         global counter
         length = len(p[1])
-        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='declaration'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='declaration'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_" + str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].append("node_" + str(counter-1))
         
         
@@ -850,19 +864,19 @@ class CParser(PLYParser):
         global counter
         if len(p) == 2:
             length = len(p[1])
-            graph.add_node(pydot.Node('node_'+str(counter), label='declaration_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='declaration_list'))
             counter = counter+1  
             edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
         else:
             length = len(p[2])
             length1 = len(p[1])
-            graph.add_node(pydot.Node('node_'+str(counter), label='declaration_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='declaration_list'))
             counter = counter+1  
             edge = pydot.Edge("node_"+str(counter-1), p[1][length1-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
         p[0].append("node_" + str(counter-1))
 
     def p_declaration_specifiers_1(self, p):
@@ -872,14 +886,18 @@ class CParser(PLYParser):
         p[1] = tmp_node1[0]
         p[0] = self._add_declaration_specifier(p[2], p[1], 'qual')
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='declaration_specifiers_opt'))
-        counter = counter+1        
-        graph.add_node(pydot.Node('node_'+str(counter), label='declaration_specifiers'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='declaration_specifiers'))
         counter = counter+1        
         edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         p[0]["ref"] = "node_" + str(counter-1)
 
     def p_declaration_specifiers_2(self, p):
@@ -888,15 +906,19 @@ class CParser(PLYParser):
         # tmp_node1 = p[1].split("@")
         # p[1] = tmp_node1[0]
         p[0] = self._add_declaration_specifier(p[2], p[1], 'type')
-        global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='declaration_specifiers_opt'))
-        counter = counter+1        
-        graph.add_node(pydot.Node('node_'+str(counter), label='declaration_specifiers'))
+        global counter      
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='declaration_specifiers'))
         counter = counter+1        
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         p[0]["ref"] = "node_" + str(counter-1)
 
     def p_declaration_specifiers_3(self, p):
@@ -905,15 +927,19 @@ class CParser(PLYParser):
         tmp_node1 = p[1].split("@")
         p[1] = tmp_node1[0]
         p[0] = self._add_declaration_specifier(p[2], p[1], 'storage')
-        global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='declaration_specifiers_opt'))
-        counter = counter+1        
-        graph.add_node(pydot.Node('node_'+str(counter), label='declaration_specifiers'))
+        global counter      
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='declaration_specifiers'))
         counter = counter+1        
         edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         p[0]["ref"] = "node_" + str(counter-1)
 
     def p_declaration_specifiers_4(self, p):
@@ -923,14 +949,18 @@ class CParser(PLYParser):
         p[1] = tmp_node1[0]
         p[0] = self._add_declaration_specifier(p[2], p[1], 'function')
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='declaration_specifiers_opt'))
-        counter = counter+1        
-        graph.add_node(pydot.Node('node_'+str(counter), label='declaration_specifiers'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='declaration_specifiers'))
         counter = counter+1        
         edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         p[0]["ref"] = "node_" + str(counter-1)
 
     def p_storage_class_specifier(self, p):
@@ -944,21 +974,21 @@ class CParser(PLYParser):
         p[0] = p[1]
         # print "TEST@@@@: ", p[1];
         if p[1] == 'auto':
-            graph.add_node(pydot.Node('node_'+str(counter), label='AUTO'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='AUTO'))
         elif p[1] == 'register':
-            graph.add_node(pydot.Node('node_'+str(counter), label='REGISTER'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='REGISTER'))
         elif p[1] == 'static':
-            graph.add_node(pydot.Node('node_'+str(counter), label='STATIC'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='STATIC'))
         elif p[1] == 'extern':
-            graph.add_node(pydot.Node('node_'+str(counter), label='EXTERN'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='EXTERN'))
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='TYPEDEF'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='TYPEDEF'))
         
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='storage_class_specifier'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='storage_class_specifier'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0] = p[0] + '@node_' + str(counter-1);
 
 
@@ -967,12 +997,12 @@ class CParser(PLYParser):
         """
         global counter
         p[0] = p[1]
-        graph.add_node(pydot.Node('node_'+str(counter), label='INLINE'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='INLINE'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='function_specifier'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='function_specifier'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0] = p[0] + '@node_' + str(counter-1);
 
 
@@ -993,35 +1023,35 @@ class CParser(PLYParser):
         global counter
         p[0] = c_ast.IdentifierType([p[1]], coord=self._coord(p.lineno(1)))
         if p[1] == 'void':
-            graph.add_node(pydot.Node('node_'+str(counter), label='VOID'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='VOID'))
         elif p[1] == '_Bool':
-            graph.add_node(pydot.Node('node_'+str(counter), label='_BOOL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='_BOOL'))
         elif p[1] == 'char':
-            graph.add_node(pydot.Node('node_'+str(counter), label='CHAR'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='CHAR'))
         elif p[1] == 'short':
-            graph.add_node(pydot.Node('node_'+str(counter), label='SHORT'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='SHORT'))
         elif p[1] == 'int':
-            graph.add_node(pydot.Node('node_'+str(counter), label='INT'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='INT'))
         elif p[1] == 'long':
-            graph.add_node(pydot.Node('node_'+str(counter), label='LONG'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='LONG'))
         elif p[1] == 'float':
-            graph.add_node(pydot.Node('node_'+str(counter), label='FLOAT'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='FLOAT'))
         elif p[1] == 'double':
-            graph.add_node(pydot.Node('node_'+str(counter), label='DOUBLE'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='DOUBLE'))
         elif p[1] == '_Complex':
-            graph.add_node(pydot.Node('node_'+str(counter), label='_COMPLEX'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='_COMPLEX'))
         elif p[1] == 'signed':
-            graph.add_node(pydot.Node('node_'+str(counter), label='SIGNED'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='SIGNED'))
         elif p[1] == 'unsigned':
-            graph.add_node(pydot.Node('node_'+str(counter), label='UNSIGNED'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='UNSIGNED'))
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='_INT128'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='_INT128'))
 
         counter = counter + 1
-        graph.add_node(pydot.Node('node_'+str(counter), label='type_specifier'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='type_specifier'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_"+str(counter-1)
         # print "TEDSTKJJ ", p[1]
 
@@ -1032,10 +1062,10 @@ class CParser(PLYParser):
         """
         global counter
         p[0] = p[1]
-        graph.add_node(pydot.Node('node_'+str(counter), label='specifier'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='specifier'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_"+str(counter-1)
 
     def p_type_qualifier(self, p):
@@ -1046,16 +1076,16 @@ class CParser(PLYParser):
         global counter
         p[0] = p[1]
         if p[1] == 'const':
-            graph.add_node(pydot.Node('node_'+str(counter), label='CONST'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='CONST'))
         elif p[1] == 'restrict':
-            graph.add_node(pydot.Node('node_'+str(counter), label='RESTRICT'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='RESTRICT'))
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='VOLATILE'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='VOLATILE'))
         counter = counter + 1
-        graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0] = p[0] + '@node_' + str(counter-1)
         # print "TERSR ",p[1];
 
@@ -1066,23 +1096,23 @@ class CParser(PLYParser):
         global counter
         p[0] = p[1] + [p[3]] if len(p) == 4 else [p[1]]
         if len(p) == 2:
-            graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].append("node_"+str(counter-1))
         else:
             length = len(p[1])
-            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[3]["ref"])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].append("node_"+str(counter-1))
 
     # If the code is declaring a variable that was declared a typedef in an
@@ -1094,14 +1124,14 @@ class CParser(PLYParser):
         """ init_declarator_list    : EQUALS initializer
         """
         p[0] = [dict(decl=None, init=p[2])]
-        graph.add_node(pydot.Node('node_'+str(counter), label='EQUALS'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='EQUALS'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator_list'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator_list'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].append("node_"+str(counter-1))
 
     # Similarly, if the code contains duplicate typedefs of, for example,
@@ -1111,10 +1141,10 @@ class CParser(PLYParser):
         """ init_declarator_list    : abstract_declarator
         """
         p[0] = [dict(decl=p[1], init=None)]
-        graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator_list'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator_list'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].append("node_"+str(counter-1))
 
     # Returns a {decl=<declarator> : init=<initializer>} dictionary
@@ -1127,22 +1157,22 @@ class CParser(PLYParser):
         global counter
         p[0] = dict(decl=p[1], init=(p[3] if len(p) > 2 else None))
         if len(p) == 2:
-            graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0]["ref"] = "node_"+str(counter-1)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='EQUALS'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='EQUALS'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='init_declarator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0]["ref"] = "node_"+str(counter-1)
 
     def p_specifier_qualifier_list_1(self, p):
@@ -1152,14 +1182,18 @@ class CParser(PLYParser):
         tmp_node1 = p[1].split("@")
         p[1] = tmp_node1[0]
         p[0] = self._add_declaration_specifier(p[2], p[1], 'qual')
-        graph.add_node(pydot.Node('node_'+str(counter), label='specifier_qualifier_list_opt'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='specifier_qualifier_list'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='specifier_qualifier_list'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         p[0]["ref"] = "node_"+str(counter-1)
 
     def p_specifier_qualifier_list_2(self, p):
@@ -1167,14 +1201,18 @@ class CParser(PLYParser):
         """
         global counter
         p[0] = self._add_declaration_specifier(p[2], p[1], 'type')
-        graph.add_node(pydot.Node('node_'+str(counter), label='specifier_qualifier_list_opt'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='specifier_qualifier_list'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='specifier_qualifier_list'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         p[0]["ref"] = "node_"+str(counter-1)
 
     # TYPEID is allowed here (and in other struct/enum related tag names), because
@@ -1193,24 +1231,24 @@ class CParser(PLYParser):
             decls=None,
             coord=self._coord(p.lineno(2)))
         if p[2].type == 'ID':
-            graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='TYPEID'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='TYPEID'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
         
 
@@ -1230,16 +1268,16 @@ class CParser(PLYParser):
             decls=p[3],
             coord=self._coord(p.lineno(2)))
         length = len(p[3])
-        graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), tmp_node3[1])
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_"+str(counter-1)
 
     def p_struct_or_union_specifier_3(self, p):
@@ -1260,36 +1298,36 @@ class CParser(PLYParser):
             coord=self._coord(p.lineno(2)))
         length = len(p[4])
         if p[2].type == 'ID':
-            graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[4][length-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), tmp_node3[1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='TYPEID'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='TYPEID'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[4][length-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), tmp_node3[1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
 
 
@@ -1300,20 +1338,20 @@ class CParser(PLYParser):
         global counter
         p[0] = p[1]
         if p[1] == 'struct':
-            graph.add_node(pydot.Node('node_'+str(counter), label='STRUCT'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='STRUCT'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0] = p[0] + '@node_'+str(counter-1)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='UNION'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='UNION'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0] = p[0] + '@node_'+str(counter-1)
 
     # Combine all declarations into a single list
@@ -1332,10 +1370,10 @@ class CParser(PLYParser):
                 length = len(p[1])
                 tmp_node = p[1][length-1]
             p[0] = p[1] or []
-            graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), tmp_node)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].append('node_'+str(counter-1))
         else:
             tmp_node = ''
@@ -1347,12 +1385,12 @@ class CParser(PLYParser):
                 tmp_node = p[2][length-1]
             x = p[1].pop()
             p[0] = p[1] + (p[2] or [])
-            graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), x)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), tmp_node)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].append('node_'+str(counter-1))
             
 
@@ -1394,18 +1432,22 @@ class CParser(PLYParser):
 
         p[0] = decls
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator_list_opt'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].append('node_'+str(counter-1))
 
     def p_struct_declaration_2(self, p):
@@ -1422,16 +1464,16 @@ class CParser(PLYParser):
                 spec=p[1],
                 decls=[dict(decl=p[2], init=None)])
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].append('node_'+str(counter-1))
 
     def p_struct_declaration_3(self, p):
@@ -1439,12 +1481,12 @@ class CParser(PLYParser):
         """
         global counter
         p[0] = None
-        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0] = ['node_'+str(counter-1)]
 
     def p_struct_declarator_list(self, p):
@@ -1455,23 +1497,23 @@ class CParser(PLYParser):
         if len(p) == 4:
             p[0] = p[1] + [p[3]]
             length = len(p[1])
-            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[3]["ref"])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].append("node_"+str(counter-1))
         else:
             p[0] = [p[1]]
-            graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].append("node_"+str(counter-1))
 
         p[0] = p[1] + [p[3]] if len(p) == 4 else [p[1]]
@@ -1485,10 +1527,10 @@ class CParser(PLYParser):
         """
         global counter
         p[0] = {'decl': p[1], 'bitsize': None}
-        graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0]["ref"] = "node_"+str(counter-1)
 
     def p_struct_declarator_2(self, p):
@@ -1498,27 +1540,27 @@ class CParser(PLYParser):
         global counter
         if len(p) > 3:
             p[0] = {'decl': p[1], 'bitsize': p[3]}
-            graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0]["ref"] = "node_"+str(counter-1)
         else:
             p[0] = {'decl': c_ast.TypeDecl(None, None, None), 'bitsize': p[2]}
-            graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0]["ref"] = "node_"+str(counter-1)
 
     def p_enum_specifier_1(self, p):
@@ -1527,16 +1569,16 @@ class CParser(PLYParser):
         """
         global counter
         p[0] = c_ast.Enum(p[2], None, self._coord(p.lineno(1)))
-        graph.add_node(pydot.Node('node_'+str(counter), label='ENUM'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='ENUM'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='ID/TYPEID'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='ID/TYPEID'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='enum_specifier'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='enum_specifier'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_"+str(counter-1)
         print "QWERTY: ", p[2]
 
@@ -1549,18 +1591,18 @@ class CParser(PLYParser):
         p[2] = tmp_node1[0]
         tmp_node2 = p[4].split("@")
         p[4] = tmp_node2[0]
-        graph.add_node(pydot.Node('node_'+str(counter), label='ENUM'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='ENUM'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='enum_specifier'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='enum_specifier'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1]) 
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1]) 
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
         
 
@@ -1575,22 +1617,22 @@ class CParser(PLYParser):
         tmp_node2 = p[5].split("@")
         p[5] = tmp_node2[0]
         
-        graph.add_node(pydot.Node('node_'+str(counter), label='ENUM'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='ENUM'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='ID / TYPEID'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='ID / TYPEID'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='enum_specifier'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='enum_specifier'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1]) 
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1]) 
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
                 
 
@@ -1602,35 +1644,35 @@ class CParser(PLYParser):
         global counter
         if len(p) == 2:
             p[0] = c_ast.EnumeratorList([p[1]], p[1].coord)
-            graph.add_node(pydot.Node('node_'+str(counter), label='enumerator_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='enumerator_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             
         elif len(p) == 3:
             p[0] = p[1]
-            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='enumerator_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='enumerator_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             
         else:
             p[1].enumerators.append(p[3])
             p[0] = p[1]
-            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='enumerator_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='enumerator_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
 
             
@@ -1643,29 +1685,29 @@ class CParser(PLYParser):
             enumerator = c_ast.Enumerator(
                         p[1], None,
                         self._coord(p.lineno(1)))
-            graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='enumerator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='enumerator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
 
         else:
             enumerator = c_ast.Enumerator(
                         p[1], p[3],
                         self._coord(p.lineno(1)))
-            graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='EQUALS'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='EQUALS'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='enumerator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='enumerator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
 
         self._add_identifier(enumerator.name, enumerator.coord)
 
@@ -1677,10 +1719,10 @@ class CParser(PLYParser):
         """
         p[0] = p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='declarator'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
         
     def p_declarator_2(self, p):
@@ -1688,12 +1730,12 @@ class CParser(PLYParser):
         """
         p[0] = self._type_modify_decl(p[2], p[1])
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='declarator'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
         
     # Since it's impossible for a type to be specified after a pointer, assume
@@ -1711,14 +1753,14 @@ class CParser(PLYParser):
 
         p[0] = self._type_modify_decl(decl, p[1])
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='TYPEID'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='TYPEID'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='declarator'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
         
     def p_direct_declarator_1(self, p):
@@ -1730,12 +1772,12 @@ class CParser(PLYParser):
             type=None,
             quals=None,
             coord=self._coord(p.lineno(1)))
-        graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
 
     def p_direct_declarator_2(self, p):
@@ -1743,19 +1785,19 @@ class CParser(PLYParser):
         """
         p[0] = p[2]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
         counter = counter+1
         
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
 
     def p_direct_declarator_3(self, p):
@@ -1773,27 +1815,35 @@ class CParser(PLYParser):
 
         p[0] = self._type_modify_decl(decl=p[1], modifier=arr)
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list_opt'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='assignment_expression_opt'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
         counter = counter+1
 
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-5))
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[3], list):
+            length = len(p[3])
+            edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif p[3] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
+        if isinstance(p[4], list):
+            length = len(p[4])
+            edge = pydot.Edge("node_"+str(counter-1), p[4][length-1])
+        elif p[4] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
    
 
@@ -1818,52 +1868,56 @@ class CParser(PLYParser):
         p[0] = self._type_modify_decl(decl=p[1], modifier=arr)
         global counter
         if isinstance(p[3], str):
-            graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='STATIC'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='STATIC'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list_opt'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
-            counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
             counter = counter+1
 
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-5))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
+            if isinstance(p[4], list):
+                length = len(p[4])
+                edge = pydot.Edge("node_"+str(counter-1), p[4][length-1])
+            elif p[4] is not None:
+                edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
+            else:
+                edge = pydot.Edge("node_"+str(counter-1), "empty")
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='STATIC'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='STATIC'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
             counter = counter+1
 
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             length = len(p[3])
             edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
 
     # Special for VLAs
@@ -1879,27 +1933,31 @@ class CParser(PLYParser):
 
         global counter
         p[0] = self._type_modify_decl(decl=p[1], modifier=arr)
-        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list_opt'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
         counter = counter+1    
-        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
         counter = counter+1
 
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-5))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[3], list):
+            length = len(p[3])
+            edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif p[3] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_"  + str(counter-1)
         
     def p_direct_declarator_6(self, p):
@@ -1930,23 +1988,27 @@ class CParser(PLYParser):
                     self._add_identifier(param.name, param.coord)
 
         p[0] = self._type_modify_decl(decl=p[1], modifier=func)
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='identifier_list_opt'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1    
-        graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
         counter = counter+1
         
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[3], list):
+            length = len(p[3])
+            edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif p[3] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
         
 
@@ -1978,33 +2040,41 @@ class CParser(PLYParser):
                 tail_type = tail_type.type
             tail_type.type = nested_type
             p[0] = p[3]
-            graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list_opt'))
-            counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='pointer'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='pointer'))
             counter = counter+1
 
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)            
+            self.graph.add_edge(edge)
+            if isinstance(p[2], list):
+                length = len(p[2])
+                edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+            elif p[2] is not None:
+                edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+            else:
+                edge = pydot.Edge("node_"+str(counter-1), "empty")
+            self.graph.add_edge(edge)            
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             
         else:
             p[0] = nested_type
-            graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list_opt'))
-            counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='pointer'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='pointer'))
             counter = counter+1
 
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)            
+            self.graph.add_edge(edge)
+            if isinstance(p[2], list):
+                length = len(p[2])
+                edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+            elif p[2] is not None:
+                edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+            else:
+                edge = pydot.Edge("node_"+str(counter-1), "empty")
+            self.graph.add_edge(edge)            
 
         p[0].ref = "node_" + str(counter-1)
         
@@ -2017,22 +2087,22 @@ class CParser(PLYParser):
             tmp_node = p[1].split("@")
             p[1] = tmp_node[0]
             p[0] = [p[1]]
-            graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), tmp_node[1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].append("node_"+str(counter-1))
         else:
             tmp_node = p[2].split("@")
             p[2] = tmp_node[0]
             x = p[1].pop()
             p[0] = p[1] + [p[2]]
-            graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), x)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), tmp_node[1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].append("node_"+str(counter-1))
         p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
 
@@ -2046,24 +2116,24 @@ class CParser(PLYParser):
         p[0] = p[1]
         global counter
         if len(p) == 2:
-            graph.add_node(pydot.Node('node_'+str(counter), label='parameter_type_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='parameter_type_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='ELLIPSIS'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='ELLIPSIS'))
             counter = counter+1  
-            graph.add_node(pydot.Node('node_'+str(counter), label='parameter_type_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='parameter_type_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
 
 
@@ -2080,10 +2150,10 @@ class CParser(PLYParser):
                 tmp_node = p[1][length-1]
             else:
                 tmp_node = p[1].ref
-            graph.add_node(pydot.Node('node_'+str(counter), label='parameter_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='parameter_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), tmp_node)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
 
         else:
@@ -2095,16 +2165,16 @@ class CParser(PLYParser):
                 tmp_node = p[3][length-1]
             else:
                 tmp_node = p[1].ref
-            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='parameter_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='parameter_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), tmp_node)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
 
     def p_parameter_declaration_1(self, p):
@@ -2122,12 +2192,12 @@ class CParser(PLYParser):
         print a
         p[0] = a[0]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='parameter_declaration'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='parameter_declaration'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_parameter_declaration_2(self, p):
@@ -2149,14 +2219,18 @@ class CParser(PLYParser):
                     spec=spec,
                     decls=[dict(decl=p[2], init=None)])[0]
             p[0] = decl
-            graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator_opt'))
-            counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='parameter_declaration'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='parameter_declaration'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
-            graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge)
+            if isinstance(p[2], list):
+                length = len(p[2])
+                edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+            elif p[2] is not None:
+                edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+            else:
+                edge = pydot.Edge("node_"+str(counter-1), "empty")
+            self.graph.add_edge(edge) 
             p[0].append("node_"+str(counter-1))
 
 
@@ -2171,14 +2245,18 @@ class CParser(PLYParser):
             typename = spec['type']
             decl = self._fix_decl_name_type(decl, typename)
             p[0] = decl
-            graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator_opt'))
-            counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='parameter_declaration'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='parameter_declaration'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
-            graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge)
+            if isinstance(p[2], list):
+                length = len(p[2])
+                edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+            elif p[2] is not None:
+                edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+            else:
+                edge = pydot.Edge("node_"+str(counter-1), "empty")
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
 
         
@@ -2190,24 +2268,24 @@ class CParser(PLYParser):
         global counter
         if len(p) == 2: # single parameter
             p[0] = c_ast.ParamList([p[1]], p[1].coord)
-            graph.add_node(pydot.Node('node_'+str(counter), label='identifier_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='identifier_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
         else:
             p[1].params.append(p[3])
             p[0] = p[1]
-            graph.add_node(pydot.Node('node_'+str(counter), label='identifier_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='identifier_list'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
 
     def p_initializer_1(self, p):
@@ -2215,10 +2293,10 @@ class CParser(PLYParser):
         """
         p[0] = p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='initializer'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='initializer'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)           
         # print p[0]
 
@@ -2237,34 +2315,38 @@ class CParser(PLYParser):
             p[1] = tmp_node1[0]
             tmp_node2 = p[3].split("@")
             p[3] = tmp_node2[0]
-            graph.add_node(pydot.Node('node_'+str(counter), label='initializer_list_opt'))
-            counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='initializer'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='initializer'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-            graph.add_edge(edge)            
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)            
+            if isinstance(p[2], list):
+                length = len(p[2])
+                edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+            elif p[2] is not None:
+                edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+            else:
+                edge = pydot.Edge("node_"+str(counter-1), "empty")
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
         else:
             tmp_node1 = p[1].split("@")
             p[1] = tmp_node1[0]
             tmp_node2 = p[4].split("@")
             p[4] = tmp_node2[0]
-            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='initializer'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='initializer'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge)            
+            self.graph.add_edge(edge)            
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
 
     def p_initializer_list(self, p):
@@ -2275,34 +2357,42 @@ class CParser(PLYParser):
         if len(p) == 3: # single initializer
             init = p[2] if p[1] is None else c_ast.NamedInitializer(p[1], p[2])
             p[0] = c_ast.InitList([init], p[2].coord)
-            graph.add_node(pydot.Node('node_'+str(counter), label='designation_opt'))
-            counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='initializer_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='initializer_list'))
             counter = counter+1
 
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)            
+            if isinstance(p[1], list):
+                length = len(p[1])
+                edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
+            elif p[1] is not None:
+                edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+            else:
+                edge = pydot.Edge("node_"+str(counter-1), "empty")
+            self.graph.add_edge(edge)            
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
         else:
             init = p[4] if p[3] is None else c_ast.NamedInitializer(p[3], p[4])
             p[1].exprs.append(init)
             p[0] = p[1]
-            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='designation_opt'))
-            counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='initializer_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='initializer_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)            
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)            
+            self.graph.add_edge(edge)            
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)            
+            if isinstance(p[3], list):
+                length = len(p[3])
+                edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+            elif p[3] is not None:
+                edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+            else:
+                edge = pydot.Edge("node_"+str(counter-1), "empty")
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
 
 
@@ -2311,12 +2401,12 @@ class CParser(PLYParser):
         """
         p[0] = p[1]
         global counter 
-        graph.add_node(pydot.Node('node_'+str(counter), label='EQUALS'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='EQUALS'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0][length-1] = "node_"+str(counter-1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
 
     # Designators are represented as a list of nodes, in the order in which
@@ -2328,18 +2418,18 @@ class CParser(PLYParser):
         """
         p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='designator_list'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='designator_list'))
         counter = counter+1
         if len(p) == 3:
             length = len(p[1])
             edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge)   
+            self.graph.add_edge(edge)   
             p[0][length-1] = 'node_' + str(counter-1)
         else:
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)            
+            self.graph.add_edge(edge)            
             p[0].append('node_' + str(counter-1))
 
     def p_designator(self, p):
@@ -2349,28 +2439,28 @@ class CParser(PLYParser):
         p[0] = p[2]
         global counter
         if len(p) == 4:
-            graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='designator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='designator'))
             counter = counter+1
 
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge)            
+            self.graph.add_edge(edge)            
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='designator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='designator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)        
 
 
@@ -2385,14 +2475,18 @@ class CParser(PLYParser):
 
         p[0] = self._fix_decl_name_type(typename, p[1]['type'])
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator_opt'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='type_name'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='type_name'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         p[0]["ref"] = "node_"+str(counter-1);
         # dictionary problems - specifier_qualifier_list is a dict
 
@@ -2405,11 +2499,11 @@ class CParser(PLYParser):
             decl=dummytype,
             modifier=p[1])
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator'))
         counter = counter+1
 
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
 
     def p_abstract_declarator_2(self, p):
@@ -2417,13 +2511,13 @@ class CParser(PLYParser):
         """
         p[0] = self._type_modify_decl(p[2], p[1])
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator'))
         counter = counter+1
 
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
 
     def p_abstract_declarator_3(self, p):
@@ -2431,10 +2525,10 @@ class CParser(PLYParser):
         """
         p[0] = p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
 
     # Creating and using direct_abstract_declarator_opt here
@@ -2446,19 +2540,19 @@ class CParser(PLYParser):
         """ direct_abstract_declarator  : LPAREN abstract_declarator RPAREN """
         p[0] = p[2]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
         counter = counter+1
 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
 
     def p_direct_abstract_declarator_2(self, p):
@@ -2472,23 +2566,27 @@ class CParser(PLYParser):
 
         p[0] = self._type_modify_decl(decl=p[1], modifier=arr)
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='assignment_expression_opt'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
         counter = counter+1
 
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[3], list):
+            length = len(p[3])
+            edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif p[3] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
 
 
@@ -2501,21 +2599,25 @@ class CParser(PLYParser):
             dim_quals=[],
             coord=self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='assignment_expression_opt'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
         counter = counter+1
 
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
 
 
@@ -2531,23 +2633,23 @@ class CParser(PLYParser):
         p[0] = self._type_modify_decl(decl=p[1], modifier=arr)
 
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
         counter = counter+1
 
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
 
 
@@ -2560,20 +2662,20 @@ class CParser(PLYParser):
             dim=c_ast.ID(p[3], self._coord(p.lineno(3))),
             dim_quals=[],
             coord=self._coord(p.lineno(1)))
-        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
 
     def p_direct_abstract_declarator_6(self, p):
@@ -2586,24 +2688,28 @@ class CParser(PLYParser):
 
         p[0] = self._type_modify_decl(decl=p[1], modifier=func)
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1 
-        graph.add_node(pydot.Node('node_'+str(counter), label='parameter_type_list_op'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1 
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
-        counter = counter+1 
-        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
         counter = counter+1 
 
 
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[3], list):
+            length = len(p[3])
+            edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif p[3] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
 
     def p_direct_abstract_declarator_7(self, p):
@@ -2614,21 +2720,25 @@ class CParser(PLYParser):
             type=c_ast.TypeDecl(None, None, None),
             coord=self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1 
-        graph.add_node(pydot.Node('node_'+str(counter), label='parameter_type_list_op'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1 
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
-        counter = counter+1 
-        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
         counter = counter+1 
 
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
 
 
@@ -2643,16 +2753,16 @@ class CParser(PLYParser):
         global counter
         if isinstance(p[1], list):
             length = len(p[1])
-            graph.add_node(pydot.Node('node_'+str(counter), label='block_item'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='block_item'))
             counter = counter+1 
             edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0][length-1] = "node_"+str(counter-1)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='block_item'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='block_item'))
             counter = counter+1 
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].append("node_"+str(counter-1))
 
     # Since we made block_item a list, this just combines lists
@@ -2666,20 +2776,20 @@ class CParser(PLYParser):
         if len(p) == 2 or p[2] == [None]:
             p[0] = p[1]
             length = len(p[1])
-            graph.add_node(pydot.Node('node_'+str(counter), label='block_item_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='block_item_list'))
             counter = counter+1 
             edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0][length-1] = "node_"+str(counter-1)
         else:
             length1 = len(p[1])
             length2 = len(p[2])
-            graph.add_node(pydot.Node('node_'+str(counter), label='block_item_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='block_item_list'))
             counter = counter+1 
             edge = pydot.Edge("node_"+str(counter-1), p[1][length1-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[2][length2-1])
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             x = p[1].pop()
             p[0] = p[1] + p[2]
             length = len(p[0])
@@ -2696,126 +2806,130 @@ class CParser(PLYParser):
         tmp_node2 = p[3].split("@")
         p[3] = tmp_node2[0]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='block_item_list_opt'))
-        counter = counter+1 
-        graph.add_node(pydot.Node('node_'+str(counter), label='compound_statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='compound_statement'))
         counter = counter+1 
         edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-        graph.add_edge(edge) 
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
+        if isinstance(p[2], list):
+            length = len(p[2])
+            edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif p[2] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_labeled_statement_1(self, p):
         """ labeled_statement : ID COLON statement """
         p[0] = c_ast.Label(p[1], p[3], self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='labeled_statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='labeled_statement'))
         counter = counter+1 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_labeled_statement_2(self, p):
         """ labeled_statement : CASE constant_expression COLON statement """
         p[0] = c_ast.Case(p[2], [p[4]], self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='CASE'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='CASE'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='labeled_statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='labeled_statement'))
         counter = counter+1 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_labeled_statement_3(self, p):
         """ labeled_statement : DEFAULT COLON statement """
         p[0] = c_ast.Default([p[3]], self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='DEFAULT'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='DEFAULT'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='labeled_statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='labeled_statement'))
         counter = counter+1 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_selection_statement_1(self, p):
         """ selection_statement : IF LPAREN expression RPAREN statement """
         p[0] = c_ast.If(p[3], p[5], None, self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='IF'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='IF'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='selection_statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='selection_statement'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_selection_statement_2(self, p):
         """ selection_statement : IF LPAREN expression RPAREN statement ELSE statement """
         p[0] = c_ast.If(p[3], p[5], p[7], self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='IF'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='IF'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='ELSE'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='ELSE'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='selection_statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='selection_statement'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-5))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[7].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_selection_statement_3(self, p):
@@ -2823,122 +2937,134 @@ class CParser(PLYParser):
         p[0] = fix_switch_cases(
                 c_ast.Switch(p[3], p[5], self._coord(p.lineno(1))))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='SWITCH'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SWITCH'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='selection_statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='selection_statement'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_iteration_statement_1(self, p):
         """ iteration_statement : WHILE LPAREN expression RPAREN statement """
         p[0] = c_ast.While(p[3], p[5], self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='WHILE'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='WHILE'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='iteration_statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='iteration_statement'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_iteration_statement_2(self, p):
         """ iteration_statement : DO statement WHILE LPAREN expression RPAREN SEMI """
         p[0] = c_ast.DoWhile(p[5], p[2], self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='DO'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='DO'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='WHILE'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='WHILE'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='iteration_statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='iteration_statement'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-6))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-5))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_iteration_statement_3(self, p):
         """ iteration_statement : FOR LPAREN expression_opt SEMI expression_opt SEMI expression_opt RPAREN statement """
         p[0] = c_ast.For(p[3], p[5], p[7], p[9], self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='FOR'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='FOR'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='expression_opt'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='expression_opt'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='iteration_statement'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='expression_opt'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='iteration_statement'))
-        counter = counter+1
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-9))
-        graph.add_edge(edge) 
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-8))
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-7))
-        graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-6))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-5))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge)
+        if isinstance(p[3], list):
+            length = len(p[3])
+            edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif p[3] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
+        if isinstance(p[5], list):
+            length = len(p[5])
+            edge = pydot.Edge("node_"+str(counter-1), p[5][length-1])
+        elif p[5] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
+        if isinstance(p[7], list):
+            length = len(p[7])
+            edge = pydot.Edge("node_"+str(counter-1), p[7][length-1])
+        elif p[7] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[7].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[9].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_iteration_statement_4(self, p):
@@ -2947,88 +3073,96 @@ class CParser(PLYParser):
                          p[4], p[6], p[8], self._coord(p.lineno(1)))
         length = len(p[3])
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='FOR'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='FOR'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='expression_opt'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='expression_opt'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='iteration_statement'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
-        counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='iteration_statement'))
-        counter = counter+1
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-7))
-        graph.add_edge(edge) 
-        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-6))
-        graph.add_edge(edge)
-        edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
-        graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-5))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        self.graph.add_edge(edge) 
+        if isinstance(p[4], list):
+            length = len(p[4])
+            edge = pydot.Edge("node_"+str(counter-1), p[4][length-1])
+        elif p[4] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
+        if isinstance(p[6], list):
+            length = len(p[6])
+            edge = pydot.Edge("node_"+str(counter-1), p[6][length-1])
+        elif p[6] is not None:
+            edge = pydot.Edge("node_"+str(counter-1), p[6].ref)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), "empty")
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[8].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_jump_statement_1(self, p):
         """ jump_statement  : GOTO ID SEMI """
         p[0] = c_ast.Goto(p[2], self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='GOTO'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='GOTO'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='jump_statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='jump_statement'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_jump_statement_2(self, p):
         """ jump_statement  : BREAK SEMI """
         p[0] = c_ast.Break(self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='BREAK'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='BREAK'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='jump_statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='jump_statement'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_jump_statement_3(self, p):
         """ jump_statement  : CONTINUE SEMI """
         p[0] = c_ast.Continue(self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='CONTINUE'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='CONTINUE'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='jump_statement'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='jump_statement'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_jump_statement_4(self, p):
@@ -3038,30 +3172,30 @@ class CParser(PLYParser):
         p[0] = c_ast.Return(p[2] if len(p) == 4 else None, self._coord(p.lineno(1)))
         global counter
         if len(p) == 3:
-            graph.add_node(pydot.Node('node_'+str(counter), label='RETURN'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='RETURN'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='jump_statement'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='jump_statement'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='RETURN'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='RETURN'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='jump_statement'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='jump_statement'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
 
     def p_expression_statement(self, p):
@@ -3069,25 +3203,29 @@ class CParser(PLYParser):
         global counter
         if p[1] is None:
             p[0] = c_ast.EmptyStatement(self._coord(p.lineno(2)))
-            graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='expression_statement'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='expression_statement'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
         else:
             p[0] = p[1]
-            graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='expression_opt'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='expression_statement'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='expression_statement'))
-            counter = counter+1
+            if isinstance(p[1], list):
+                length = len(p[1])
+                edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
+            elif p[1] is not None:
+                edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+            else:
+                edge = pydot.Edge("node_"+str(counter-1), "empty")
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
 
     def p_expression(self, p):
@@ -3097,10 +3235,10 @@ class CParser(PLYParser):
         global counter
         if len(p) == 2:
             p[0] = p[1]
-            graph.add_node(pydot.Node('node_'+str(counter), label='expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
         else:
             if not isinstance(p[1], c_ast.ExprList):
@@ -3108,16 +3246,16 @@ class CParser(PLYParser):
 
             p[1].exprs.append(p[3])
             p[0] = p[1]
-            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
 
     def p_typedef_name(self, p):
@@ -3125,12 +3263,12 @@ class CParser(PLYParser):
         p[0] = c_ast.IdentifierType([p[1]], coord=self._coord(p.lineno(1)))
         # print "fdgdfgsffd",p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='TYPEID'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='TYPEID'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='typedef_name'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='typedef_name'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_assignment_expression(self, p):
@@ -3140,23 +3278,23 @@ class CParser(PLYParser):
         global counter
         if len(p) == 2:
             p[0] = p[1]
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
         else:
             tmp_node = p[2].split("@")
             p[2] = tmp_node[0]
             p[0] = c_ast.Assignment(p[2], p[1], p[3], p[1].coord)
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), tmp_node[1])
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
 
     # K&R2 defines these as many separate rules, to encode
@@ -3181,92 +3319,92 @@ class CParser(PLYParser):
         # print "sssssssssss", p[1], type(p[1])
         global counter
         if p[1] == '=':
-            graph.add_node(pydot.Node('node_'+str(counter), label='EQUALS'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='EQUALS'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)
         elif p[1] == '^=':
-            graph.add_node(pydot.Node('node_'+str(counter), label='XOREQUAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='XOREQUAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)    
         elif p[1] == '*=':
-            graph.add_node(pydot.Node('node_'+str(counter), label='TIMESEQUAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='TIMESEQUAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)    
         elif p[1] == '/=':
-            graph.add_node(pydot.Node('node_'+str(counter), label='DIVEQUAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='DIVEQUAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)    
         elif p[1] == '%=':
-            graph.add_node(pydot.Node('node_'+str(counter), label='MODEQUAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='MODEQUAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)    
         elif p[1] == '+=':
-            graph.add_node(pydot.Node('node_'+str(counter), label='PLUSEQUAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='PLUSEQUAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)    
         elif p[1] == '-=':
-            graph.add_node(pydot.Node('node_'+str(counter), label='MINUSEQUAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='MINUSEQUAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)    
         elif p[1] == '<<=':
-            graph.add_node(pydot.Node('node_'+str(counter), label='LSHIFTEQUAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='LSHIFTEQUAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)    
         elif p[1] == '>>=':
-            graph.add_node(pydot.Node('node_'+str(counter), label='RSHIFTEQUAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='RSHIFTEQUAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)    
         elif p[1] == '&=':
-            graph.add_node(pydot.Node('node_'+str(counter), label='ANDEQUAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='ANDEQUAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)    
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='OREQUAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='OREQUAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='assignment_operator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)     
     
 
@@ -3274,10 +3412,10 @@ class CParser(PLYParser):
         """ constant_expression : conditional_expression """
         p[0] = p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='constant_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='constant_expression'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_conditional_expression(self, p):
@@ -3287,29 +3425,29 @@ class CParser(PLYParser):
         global counter
         if len(p) == 2:
             p[0] = p[1]
-            graph.add_node(pydot.Node('node_'+str(counter), label='conditional_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='conditional_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
         else:
             p[0] = c_ast.TernaryOp(p[1], p[3], p[5], p[1].coord)
-            graph.add_node(pydot.Node('node_'+str(counter), label='CONDOP'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='CONDOP'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='conditional_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='conditional_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)  
+            self.graph.add_edge(edge)  
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
 
     def p_binary_expression(self, p):
@@ -3336,269 +3474,269 @@ class CParser(PLYParser):
         global counter 
         if len(p) == 2:
             p[0] = p[1]
-            graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
 
         else:
             p[0] = c_ast.BinaryOp(p[2], p[1], p[3], p[1].coord)
             if p[2] == '*':
-                graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '/':
-                graph.add_node(pydot.Node('node_'+str(counter), label='DIVIDE'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='DIVIDE'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '%':
-                graph.add_node(pydot.Node('node_'+str(counter), label='MOD'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='MOD'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '+':
-                graph.add_node(pydot.Node('node_'+str(counter), label='PLUS'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='PLUS'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '-':
-                graph.add_node(pydot.Node('node_'+str(counter), label='MINUS'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='MINUS'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '>>':
-                graph.add_node(pydot.Node('node_'+str(counter), label='RSHIFT'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='RSHIFT'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '<<':
-                graph.add_node(pydot.Node('node_'+str(counter), label='LSHIFT'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='LSHIFT'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '<':
-                graph.add_node(pydot.Node('node_'+str(counter), label='LT'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='LT'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '<=':
-                graph.add_node(pydot.Node('node_'+str(counter), label='LE'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='LE'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '>=':
-                graph.add_node(pydot.Node('node_'+str(counter), label='GE'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='GE'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '>':
-                graph.add_node(pydot.Node('node_'+str(counter), label='GT'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='GT'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '==':
-                graph.add_node(pydot.Node('node_'+str(counter), label='EQ'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='EQ'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '!=':
-                graph.add_node(pydot.Node('node_'+str(counter), label='NE'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='NE'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '&':
-                graph.add_node(pydot.Node('node_'+str(counter), label='AND'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='AND'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '|':
-                graph.add_node(pydot.Node('node_'+str(counter), label='OR'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='OR'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '^':
-                graph.add_node(pydot.Node('node_'+str(counter), label='XOR'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='XOR'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             elif p[2] == '&&':
-                graph.add_node(pydot.Node('node_'+str(counter), label='LAND'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='LAND'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
             else:
-                graph.add_node(pydot.Node('node_'+str(counter), label='LOR'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='LOR'))
                 counter = counter+1
-                graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
+                self.graph.add_node(pydot.Node('node_'+str(counter), label='binary_expression'))
                 counter = counter+1
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-                graph.add_edge(edge) 
+                self.graph.add_edge(edge) 
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-                graph.add_edge(edge)
+                self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
 
     def p_cast_expression_1(self, p):
         """ cast_expression : unary_expression """
         p[0] = p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='cast_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='cast_expression'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_cast_expression_2(self, p):
         """ cast_expression : LPAREN type_name RPAREN cast_expression """
         p[0] = c_ast.Cast(p[2], p[4], self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='cast_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='cast_expression'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_unary_expression_1(self, p):
         """ unary_expression    : postfix_expression """
         p[0] = p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='unary_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='unary_expression'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
 
     def p_unary_expression_2(self, p):
@@ -3614,32 +3752,32 @@ class CParser(PLYParser):
         p[0] = c_ast.UnaryOp(p[1], p[2], p[2].coord)
         global counter
         if p[1] == '++':
-            graph.add_node(pydot.Node('node_'+str(counter), label='PLUSPLUS'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='PLUSPLUS'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unary_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unary_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
         elif p[1] == '--':
-            graph.add_node(pydot.Node('node_'+str(counter), label='MINUSMINUS'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='MINUSMINUS'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unary_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unary_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='unary_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unary_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), tmp_node[1])
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)    
 
     def p_unary_expression_3(self, p):
@@ -3652,32 +3790,32 @@ class CParser(PLYParser):
             self._coord(p.lineno(1)))
         global counter
         if len(p) == 3:
-            graph.add_node(pydot.Node('node_'+str(counter), label='SIZEOF'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='SIZEOF'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unary_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unary_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='SIZEOF'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='SIZEOF'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unary_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unary_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
 
     def p_unary_operator(self, p):
@@ -3691,82 +3829,82 @@ class CParser(PLYParser):
         p[0] = p[1]
         global counter
         if p[1] == '&':
-            graph.add_node(pydot.Node('node_'+str(counter), label='AND'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='AND'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unary_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unary_operator'))
             counter = counter+1    
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)
         elif p[1] == '*':
-            graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unary_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unary_operator'))
             counter = counter+1    
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)
         elif p[1] == '+':
-            graph.add_node(pydot.Node('node_'+str(counter), label='PLUS'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='PLUS'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unary_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unary_operator'))
             counter = counter+1    
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)
         elif p[1] == '-':
-            graph.add_node(pydot.Node('node_'+str(counter), label='MINUS'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='MINUS'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unary_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unary_operator'))
             counter = counter+1    
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)
         elif p[1] == '!':
-            graph.add_node(pydot.Node('node_'+str(counter), label='NOT'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='NOT'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unary_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unary_operator'))
             counter = counter+1    
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='LNOT'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='LNOT'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unary_operator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unary_operator'))
             counter = counter+1    
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)
 
     def p_postfix_expression_1(self, p):
         """ postfix_expression  : primary_expression """
         p[0] = p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref =  "node_"+str(counter-1)
 
     def p_postfix_expression_2(self, p):
         """ postfix_expression  : postfix_expression LBRACKET expression RBRACKET """
         p[0] = c_ast.ArrayRef(p[1], p[3], p[1].coord)
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref =  "node_"+str(counter-1)
 
     def p_postfix_expression_3(self, p):
@@ -3776,34 +3914,34 @@ class CParser(PLYParser):
         p[0] = c_ast.FuncCall(p[1], p[3] if len(p) == 5 else None, p[1].coord)
         global counter 
         if len(p) == 4:
-            graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref =  "node_"+str(counter-1)
         else:
-            graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge) 
+            self.graph.add_edge(edge) 
             p[0].ref =  "node_"+str(counter-1)
 
     def p_postfix_expression_4(self, p):
@@ -3816,18 +3954,18 @@ class CParser(PLYParser):
         field = c_ast.ID(p[3], self._coord(p.lineno(3)))
         p[0] = c_ast.StructRef(p[1], p[2], field, p[1].coord)
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='PERIOD/ARROW'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='PERIOD/ARROW'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='ID/TYPEID'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='ID/TYPEID'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref =  "node_"+str(counter-1)
 
     def p_postfix_expression_5(self, p):
@@ -3836,14 +3974,14 @@ class CParser(PLYParser):
         """
         p[0] = c_ast.UnaryOp('p' + p[2], p[1], p[1].coord)
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='INCREMENT / DECREMENT'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='INCREMENT / DECREMENT'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge) 
+        self.graph.add_edge(edge) 
         p[0].ref =  "node_"+str(counter-1)
          
 
@@ -3853,52 +3991,52 @@ class CParser(PLYParser):
         """
         p[0] = c_ast.CompoundLiteral(p[2], p[5])
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
         if len(p) ==  7:
             tmp_node1 = p[4].split("@")
             p[4] = tmp_node1[0]
             tmp_node2 = p[6].split("@")
             p[6] = tmp_node2[0]
-            graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)  
+            self.graph.add_edge(edge)  
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge)      
+            self.graph.add_edge(edge)      
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)  
+            self.graph.add_edge(edge)  
             edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-            graph.add_edge(edge)      
+            self.graph.add_edge(edge)      
             edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
-            graph.add_edge(edge)      
+            self.graph.add_edge(edge)      
             edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
-            graph.add_edge(edge)      
+            self.graph.add_edge(edge)      
         else:
             tmp_node1 = p[4].split("@")
             p[4] = tmp_node1[0]
             tmp_node2 = p[7].split("@")
             p[7] = tmp_node2[0]
-            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='postfix_expression'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-            graph.add_edge(edge)  
+            self.graph.add_edge(edge)  
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-            graph.add_edge(edge)      
+            self.graph.add_edge(edge)      
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)  
+            self.graph.add_edge(edge)  
             edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-            graph.add_edge(edge)      
+            self.graph.add_edge(edge)      
             edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
-            graph.add_edge(edge)      
+            self.graph.add_edge(edge)      
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)  
+            self.graph.add_edge(edge)  
             edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
-            graph.add_edge(edge)  
+            self.graph.add_edge(edge)  
         p[0].ref =  "node_"+str(counter-1)
         
 
@@ -3906,10 +4044,10 @@ class CParser(PLYParser):
         """ primary_expression  : identifier """
         p[0] = p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='primary_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='primary_expression'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)      
+        self.graph.add_edge(edge)      
         p[0].ref =  "node_"+str(counter-1)
         
 
@@ -3917,10 +4055,10 @@ class CParser(PLYParser):
         """ primary_expression  : constant """
         p[0] = p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='primary_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='primary_expression'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)      
+        self.graph.add_edge(edge)      
         p[0].ref =  "node_"+str(counter-1)
         
     def p_primary_expression_3(self, p):
@@ -3929,10 +4067,10 @@ class CParser(PLYParser):
         """
         p[0] = p[1]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='primary_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='primary_expression'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-        graph.add_edge(edge)      
+        self.graph.add_edge(edge)      
         p[0].ref =  "node_"+str(counter-1)
         
 
@@ -3940,19 +4078,19 @@ class CParser(PLYParser):
         """ primary_expression  : LPAREN expression RPAREN """
         p[0] = p[2]
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='primary_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='primary_expression'))
         counter = counter+1
         
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)  
+        self.graph.add_edge(edge)  
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
-        graph.add_edge(edge)      
+        self.graph.add_edge(edge)      
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)  
+        self.graph.add_edge(edge)  
         p[0].ref =  "node_"+str(counter-1)
         
 
@@ -3964,29 +4102,29 @@ class CParser(PLYParser):
                               c_ast.ExprList([p[3], p[5]], coord),
                               coord)
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='OFFSETOF'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='OFFSETOF'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='primary_expression'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='primary_expression'))
         counter = counter+1
                 
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-5))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-        graph.add_edge(edge)      
+        self.graph.add_edge(edge)      
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-        graph.add_edge(edge)  
+        self.graph.add_edge(edge)  
         edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
 
         p[0].ref =  "node_"+str(counter-1)
 
@@ -4001,45 +4139,45 @@ class CParser(PLYParser):
         if len(p) == 2:
             p[0] = p[1]
             # global counter
-            graph.add_node(pydot.Node('node_'+str(counter), label='offsetof_member_designator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='offsetof_member_designator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref =  "node_"+str(counter-1)
 
         elif len(p) == 4:
             field = c_ast.ID(p[3], self._coord(p.lineno(3)))
             p[0] = c_ast.StructRef(p[1], p[2], field, p[1].coord)
             # global counter
-            graph.add_node(pydot.Node('node_'+str(counter), label='PERIOD'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='PERIOD'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='offsetof_member_designator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='offsetof_member_designator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref =  "node_"+str(counter-1)
 
         elif len(p) == 5:
             p[0] = c_ast.ArrayRef(p[1], p[3], p[1].coord)
             # global counter
-            graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='offsetof_member_designator'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='offsetof_member_designator'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref =  "node_"+str(counter-1)
 
         else:
@@ -4053,37 +4191,37 @@ class CParser(PLYParser):
         if len(p) == 2: # single expr
             p[0] = c_ast.ExprList([p[1]], p[1].coord)
             # global counter
-            graph.add_node(pydot.Node('node_'+str(counter), label='argument_expression_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='argument_expression_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref =  "node_"+str(counter-1)
         else:
             p[1].exprs.append(p[3])
             p[0] = p[1]
             # global counter
-            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='argument_expression_list'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='argument_expression_list'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref =  "node_"+str(counter-1)
 
     def p_identifier(self, p):
         """ identifier  : ID """
         p[0] = c_ast.ID(p[1], self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='identifier'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='identifier'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref =  "node_"+str(counter-1)
         # print "ABHISHEK: ",p[1]
 
@@ -4096,12 +4234,12 @@ class CParser(PLYParser):
         p[0] = c_ast.Constant(
             'int', p[1], self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='INT_CONST'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='INT_CONST'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='constant'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='constant'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref =  "node_"+str(counter-1)
 
     def p_constant_2(self, p):
@@ -4111,12 +4249,12 @@ class CParser(PLYParser):
         p[0] = c_ast.Constant(
             'float', p[1], self._coord(p.lineno(1)))
         global counter
-        graph.add_node(pydot.Node('node_'+str(counter), label='FLOAT/HEX_FLOAT_CONST'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='FLOAT/HEX_FLOAT_CONST'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='constant'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='constant'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref =  "node_"+str(counter-1)
 
     def p_constant_3(self, p):
@@ -4127,12 +4265,12 @@ class CParser(PLYParser):
         p[0] = c_ast.Constant(
             'char', p[1], self._coord(p.lineno(1)))
         # print "char constant", type(p[1])
-        graph.add_node(pydot.Node('node_'+str(counter), label='CHAR_CONST'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='CHAR_CONST'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='constant'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='constant'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         p[0].ref =  "node_"+str(counter-1)
     # The "unified" string and wstring literal rules are for supporting
     # concatenation of adjacent string literals.
@@ -4147,24 +4285,24 @@ class CParser(PLYParser):
         if len(p) == 2: # single literal
             p[0] = c_ast.Constant(
                 'string', p[1], self._coord(p.lineno(1)))
-            graph.add_node(pydot.Node('node_'+str(counter), label='STRING_LITERAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='STRING_LITERAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unified_string_literal'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unified_string_literal'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref =  "node_"+str(counter-1)
         else:
             p[1].value = p[1].value[:-1] + p[2][1:]
             p[0] = p[1]
-            graph.add_node(pydot.Node('node_'+str(counter), label='STRING_LITERAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='STRING_LITERAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unified_string_literal'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unified_string_literal'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
             
 
@@ -4176,24 +4314,24 @@ class CParser(PLYParser):
         if len(p) == 2: # single literal
             p[0] = c_ast.Constant(
                 'string', p[1], self._coord(p.lineno(1)))
-            graph.add_node(pydot.Node('node_'+str(counter), label='WSTRING_LITERAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='WSTRING_LITERAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unified_wstring_literal'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unified_wstring_literal'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref =  "node_"+str(counter-1)
         else:
             p[1].value = p[1].value.rstrip()[:-1] + p[2][2:]
             p[0] = p[1]
-            graph.add_node(pydot.Node('node_'+str(counter), label='WSTRING_LITERAL'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='WSTRING_LITERAL'))
             counter = counter+1
-            graph.add_node(pydot.Node('node_'+str(counter), label='unified_wstring_literal'))
+            self.graph.add_node(pydot.Node('node_'+str(counter), label='unified_wstring_literal'))
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
-            graph.add_edge(edge)
+            self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
             
 
@@ -4203,12 +4341,12 @@ class CParser(PLYParser):
         global counter
         p[0] = p[1]
         p.set_lineno(0, p.lineno(1))
-        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACE'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='LBRACE'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='brace_open'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='brace_open'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         #print "right brace printing", p[1], type(p[1])
         p[0] = p[0] + "@node_" + str(counter-1)    
 
@@ -4218,12 +4356,12 @@ class CParser(PLYParser):
         global counter
         p[0] = p[1]
         p.set_lineno(0, p.lineno(1))
-        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACE'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='RBRACE'))
         counter = counter+1
-        graph.add_node(pydot.Node('node_'+str(counter), label='brace_close'))
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='brace_close'))
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-        graph.add_edge(edge)
+        self.graph.add_edge(edge)
         #print "right brace printing", p[1], type(p[1])
         p[0] = p[0] + "@node_" + str(counter-1)
 
@@ -4251,9 +4389,9 @@ if __name__ == "__main__":
     from __init__ import preprocess_file
     from __init__ import parse_file
     # from pycparser import preprocess_file
-
+    graph = pydot.Dot(graph_type='digraph')
     t1 = time.time()
-    parser = CParser(lex_optimize=False, yacc_debug=True, yacc_optimize=False)
+    parser = CParser(lex_optimize=False, yacc_debug=True, yacc_optimize=False, graph=graph)
     sys.stdout.write(str(time.time() - t1) + '\n')
     filename = 'test2.c'
     # text1 = preprocess_file(filename, cpp_path='cpp', cpp_args=r'-Iutils/fake_libc_include')
@@ -4265,13 +4403,14 @@ if __name__ == "__main__":
     '''
 
     # set debuglevel to 2 for debugging
-    t = parser.parse(text, filename, debuglevel=0)
-    graph.write_png('test2.png')
+    t, graph_returned = parser.parse(text, filename, debuglevel=0)
+    print "graph returned: ", graph_returned
+    graph_returned.write_png('test2.png')
     # t.show()
 
     # ast = parse_file(filename, use_cpp=True,
     #         cpp_path='cpp',
     #         cpp_args=r'-Iutils/fake_libc_include')
     # ast.show(showcoord=True)
-    # graph.write_png('test1.png')
+    # self.graph.write_png('test1.png')
 
