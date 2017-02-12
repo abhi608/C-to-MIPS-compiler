@@ -1437,33 +1437,109 @@ class CParser(PLYParser):
         """ initializer_list    : designation_opt initializer
                                 | initializer_list COMMA designation_opt initializer
         """
+        global counter
         if len(p) == 3: # single initializer
             init = p[2] if p[1] is None else c_ast.NamedInitializer(p[1], p[2])
             p[0] = c_ast.InitList([init], p[2].coord)
+            graph.add_node(pydot.Node('node_'+str(counter), label='designation_opt'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='initializer_list'))
+            counter = counter+1
+
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)            
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+            graph.add_edge(edge)
+            p[0].ref = "node_"+str(counter-1)
         else:
             init = p[4] if p[3] is None else c_ast.NamedInitializer(p[3], p[4])
             p[1].exprs.append(init)
             p[0] = p[1]
+            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='designation_opt'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='initializer_list'))
+            counter = counter+1
+
+            edge = pydot.Edge("node_"+str(counter-1), p[1].ref
+            graph.add_edge(edge)            
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+            graph.add_edge(edge)            
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), p[4].ref
+            graph.add_edge(edge) 
+            p[0].ref = "node_"+str(counter-1)
+
 
     def p_designation(self, p):
         """ designation : designator_list EQUALS
         """
         p[0] = p[1]
+        global counter 
+        graph.add_node(pydot.Node('node_'+str(counter), label='EQUALS'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), p[1][length-1]
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0][length-1] = "node_"+str(counter-1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
 
     # Designators are represented as a list of nodes, in the order in which
     # they're written in the code.
     #
-    def p_designator_list(self, p):
+    def p_designator_list(self, p):                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
         """ designator_list : designator
                             | designator_list designator
         """
         p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='designator_list'))
+        counter = counter+1
+        if len(p) == 3:
+            length = len(p[1])
+            edge = pydot.Edge("node_"+str(counter-1), p[1][length-1]
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+            graph.add_edge(edge)   
+            p[0][length-1] = 'node_' + str(counter-1)
+        else:
+            edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+            graph.add_edge(edge)            
+            p[0].append('node_' + str(counter-1))
 
     def p_designator(self, p):
         """ designator  : LBRACKET constant_expression RBRACKET
                         | PERIOD identifier
         """
         p[0] = p[2]
+        global counter
+        if len(p) == 4:
+            graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='designator'))
+            counter = counter+1
+
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+            graph.add_edge(edge)            
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+        else:
+            graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='designator'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+            graph.add_edge(edge)
+        p[0].ref = 'node_' + str(counter-1)        
+
 
     def p_type_name(self, p):
         """ type_name   : specifier_qualifier_list abstract_declarator_opt
@@ -1475,6 +1551,13 @@ class CParser(PLYParser):
             coord=self._coord(p.lineno(2)))
 
         p[0] = self._fix_decl_name_type(typename, p[1]['type'])
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator_opt'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='type_name'))
+        counter = counter+1
+        # dictionary problems - specifier_qualifier_list is a dict
+
 
     def p_abstract_declarator_1(self, p):
         """ abstract_declarator     : pointer
@@ -1483,16 +1566,38 @@ class CParser(PLYParser):
         p[0] = self._type_modify_decl(
             decl=dummytype,
             modifier=p[1])
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator'))
+        counter = counter+1
+
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        p[0].ref = 'node_' + str(counter-1)
 
     def p_abstract_declarator_2(self, p):
         """ abstract_declarator     : pointer direct_abstract_declarator
         """
         p[0] = self._type_modify_decl(p[2], p[1])
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator'))
+        counter = counter+1
+
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        graph.add_edge(edge)
+        p[0].ref = 'node_' + str(counter-1)
 
     def p_abstract_declarator_3(self, p):
         """ abstract_declarator     : direct_abstract_declarator
         """
         p[0] = p[1]
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        p[0].ref = 'node_' + str(counter-1)
 
     # Creating and using direct_abstract_declarator_opt here
     # instead of listing both direct_abstract_declarator and the
@@ -1502,6 +1607,21 @@ class CParser(PLYParser):
     def p_direct_abstract_declarator_1(self, p):
         """ direct_abstract_declarator  : LPAREN abstract_declarator RPAREN """
         p[0] = p[2]
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        counter = counter+1
+
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = 'node_' + str(counter-1)
 
     def p_direct_abstract_declarator_2(self, p):
         """ direct_abstract_declarator  : direct_abstract_declarator LBRACKET assignment_expression_opt RBRACKET
@@ -1513,6 +1633,26 @@ class CParser(PLYParser):
             coord=p[1].coord)
 
         p[0] = self._type_modify_decl(decl=p[1], modifier=arr)
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='assignment_expression_opt'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        counter = counter+1
+
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = 'node_' + str(counter-1)
+
 
     def p_direct_abstract_declarator_3(self, p):
         """ direct_abstract_declarator  : LBRACKET assignment_expression_opt RBRACKET
@@ -1522,6 +1662,24 @@ class CParser(PLYParser):
             dim=p[2],
             dim_quals=[],
             coord=self._coord(p.lineno(1)))
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='assignment_expression_opt'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        counter = counter+1
+
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = 'node_' + str(counter-1)
+
 
     def p_direct_abstract_declarator_4(self, p):
         """ direct_abstract_declarator  : direct_abstract_declarator LBRACKET TIMES RBRACKET
@@ -1533,6 +1691,27 @@ class CParser(PLYParser):
             coord=p[1].coord)
 
         p[0] = self._type_modify_decl(decl=p[1], modifier=arr)
+
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        counter = counter+1
+
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = 'node_' + str(counter-1)
+
 
     def p_direct_abstract_declarator_5(self, p):
         """ direct_abstract_declarator  : LBRACKET TIMES RBRACKET
@@ -1568,6 +1747,26 @@ class CParser(PLYParser):
             coord=p[1].coord)
 
         p[0] = self._type_modify_decl(decl=p[1], modifier=func)
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        counter = counter+1 
+        graph.add_node(pydot.Node('node_'+str(counter), label='parameter_type_list_op'))
+        counter = counter+1 
+        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        counter = counter+1 
+        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        counter = counter+1 
+
+
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = "node_" + str(counter-1)
 
     def p_direct_abstract_declarator_7(self, p):
         """ direct_abstract_declarator  : LPAREN parameter_type_list_opt RPAREN
@@ -1576,6 +1775,24 @@ class CParser(PLYParser):
             args=p[2],
             type=c_ast.TypeDecl(None, None, None),
             coord=self._coord(p.lineno(1)))
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        counter = counter+1 
+        graph.add_node(pydot.Node('node_'+str(counter), label='parameter_type_list_op'))
+        counter = counter+1 
+        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        counter = counter+1 
+        graph.add_node(pydot.Node('node_'+str(counter), label='direct_abstract_declarator'))
+        counter = counter+1 
+
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = "node_" + str(counter-1)
+
 
     # declaration is a list, statement isn't. To make it consistent, block_item
     # will always be a list
