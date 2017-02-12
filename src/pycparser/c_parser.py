@@ -688,6 +688,8 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
@@ -721,6 +723,8 @@ class CParser(PLYParser):
         if isinstance(p[3], list):
             length = len(p[3])
             edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif isinstance(p[3], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[3]["ref"])
         elif p[3] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
         else:
@@ -812,6 +816,8 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
@@ -893,6 +899,8 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
@@ -914,6 +922,8 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
@@ -935,6 +945,8 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
@@ -956,6 +968,8 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
@@ -1189,6 +1203,8 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
@@ -1208,6 +1224,8 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
@@ -1230,26 +1248,15 @@ class CParser(PLYParser):
             name=p[2],
             decls=None,
             coord=self._coord(p.lineno(2)))
-        if p[2].type == 'ID':
-            self.graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
-            counter = counter+1
-            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
-            counter = counter+1
-            edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-            self.graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            self.graph.add_edge(edge)
-            p[0].ref = "node_"+str(counter-1)
-        else:
-            self.graph.add_node(pydot.Node('node_'+str(counter), label='TYPEID'))
-            counter = counter+1
-            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
-            counter = counter+1
-            edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-            self.graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            self.graph.add_edge(edge)
-            p[0].ref = "node_"+str(counter-1)
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='TYPEID/ID'))
+        counter = counter+1
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
+        self.graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        self.graph.add_edge(edge)
+        p[0].ref = "node_"+str(counter-1)
         
 
     def p_struct_or_union_specifier_2(self, p):
@@ -1297,38 +1304,22 @@ class CParser(PLYParser):
             decls=p[4],
             coord=self._coord(p.lineno(2)))
         length = len(p[4])
-        if p[2].type == 'ID':
-            self.graph.add_node(pydot.Node('node_'+str(counter), label='ID'))
-            counter = counter+1
-            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
-            counter = counter+1
-            edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-            self.graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            self.graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
-            self.graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), p[4][length-1])
-            self.graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), tmp_node3[1])
-            self.graph.add_edge(edge)
-            p[0].ref = "node_"+str(counter-1)
-        else:
-            self.graph.add_node(pydot.Node('node_'+str(counter), label='TYPEID'))
-            counter = counter+1
-            self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
-            counter = counter+1
-            edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
-            self.graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
-            self.graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
-            self.graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), p[4][length-1])
-            self.graph.add_edge(edge)
-            edge = pydot.Edge("node_"+str(counter-1), tmp_node3[1])
-            self.graph.add_edge(edge)
-            p[0].ref = "node_"+str(counter-1)
+    
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='ID/TYPEID'))
+        counter = counter+1
+        self.graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union_specifier'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), tmp_node1[1])
+        self.graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        self.graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
+        self.graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), p[4][length-1])
+        self.graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), tmp_node3[1])
+        self.graph.add_edge(edge)
+        p[0].ref = "node_"+str(counter-1)
 
 
     def p_struct_or_union(self, p):
@@ -1441,6 +1432,8 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
@@ -1829,6 +1822,8 @@ class CParser(PLYParser):
         if isinstance(p[3], list):
             length = len(p[3])
             edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif isinstance(p[3], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[3]["ref"])
         elif p[3] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
         else:
@@ -1837,6 +1832,8 @@ class CParser(PLYParser):
         if isinstance(p[4], list):
             length = len(p[4])
             edge = pydot.Edge("node_"+str(counter-1), p[4][length-1])
+        elif isinstance(p[4], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[4]["ref"])
         elif p[4] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
         else:
@@ -1886,6 +1883,8 @@ class CParser(PLYParser):
             if isinstance(p[4], list):
                 length = len(p[4])
                 edge = pydot.Edge("node_"+str(counter-1), p[4][length-1])
+            elif isinstance(p[4], dict):
+                edge = pydot.Edge("node_"+str(counter-1), p[4]["ref"])
             elif p[4] is not None:
                 edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
             else:
@@ -1949,6 +1948,8 @@ class CParser(PLYParser):
         if isinstance(p[3], list):
             length = len(p[3])
             edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif isinstance(p[3], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[3]["ref"])
         elif p[3] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
         else:
@@ -2002,6 +2003,8 @@ class CParser(PLYParser):
         if isinstance(p[3], list):
             length = len(p[3])
             edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif isinstance(p[3], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[3]["ref"])
         elif p[3] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
         else:
@@ -2050,6 +2053,8 @@ class CParser(PLYParser):
             if isinstance(p[2], list):
                 length = len(p[2])
                 edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+            elif isinstance(p[2], dict):
+                edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
             elif p[2] is not None:
                 edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
             else:
@@ -2070,6 +2075,8 @@ class CParser(PLYParser):
             if isinstance(p[2], list):
                 length = len(p[2])
                 edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+            elif isinstance(p[2], dict):
+                edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
             elif p[2] is not None:
                 edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
             else:
@@ -2226,6 +2233,8 @@ class CParser(PLYParser):
             if isinstance(p[2], list):
                 length = len(p[2])
                 edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+            elif isinstance(p[2], dict):
+                edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
             elif p[2] is not None:
                 edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
             else:
@@ -2252,6 +2261,8 @@ class CParser(PLYParser):
             if isinstance(p[2], list):
                 length = len(p[2])
                 edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+            elif isinstance(p[2], dict):
+                edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
             elif p[2] is not None:
                 edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
             else:
@@ -2322,6 +2333,8 @@ class CParser(PLYParser):
             if isinstance(p[2], list):
                 length = len(p[2])
                 edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+            elif isinstance(p[2], dict):
+                edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
             elif p[2] is not None:
                 edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
             else:
@@ -2363,6 +2376,8 @@ class CParser(PLYParser):
             if isinstance(p[1], list):
                 length = len(p[1])
                 edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
+            elif isinstance(p[1], dict):
+                edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
             elif p[1] is not None:
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
             else:
@@ -2386,6 +2401,8 @@ class CParser(PLYParser):
             if isinstance(p[3], list):
                 length = len(p[3])
                 edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+            elif isinstance(p[3], dict):
+                edge = pydot.Edge("node_"+str(counter-1), p[3]["ref"])
             elif p[3] is not None:
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
             else:
@@ -2482,12 +2499,14 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
             edge = pydot.Edge("node_"+str(counter-1), "empty")
         self.graph.add_edge(edge)
-        p[0]["ref"] = "node_"+str(counter-1);
+        p[0].ref = "node_"+str(counter-1);
         # dictionary problems - specifier_qualifier_list is a dict
 
 
@@ -2580,6 +2599,8 @@ class CParser(PLYParser):
         if isinstance(p[3], list):
             length = len(p[3])
             edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif isinstance(p[3], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[3]["ref"])
         elif p[3] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
         else:
@@ -2611,6 +2632,8 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
@@ -2703,6 +2726,8 @@ class CParser(PLYParser):
         if isinstance(p[3], list):
             length = len(p[3])
             edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif isinstance(p[3], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[3]["ref"])
         elif p[3] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
         else:
@@ -2732,6 +2757,8 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
@@ -2813,6 +2840,8 @@ class CParser(PLYParser):
         if isinstance(p[2], list):
             length = len(p[2])
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
+        elif isinstance(p[2], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[2]["ref"])
         elif p[2] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         else:
@@ -3036,6 +3065,8 @@ class CParser(PLYParser):
         if isinstance(p[3], list):
             length = len(p[3])
             edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+        elif isinstance(p[3], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[3]["ref"])
         elif p[3] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
         else:
@@ -3046,6 +3077,8 @@ class CParser(PLYParser):
         if isinstance(p[5], list):
             length = len(p[5])
             edge = pydot.Edge("node_"+str(counter-1), p[5][length-1])
+        elif isinstance(p[5], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[5]["ref"])
         elif p[5] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
         else:
@@ -3056,6 +3089,8 @@ class CParser(PLYParser):
         if isinstance(p[7], list):
             length = len(p[7])
             edge = pydot.Edge("node_"+str(counter-1), p[7][length-1])
+        elif isinstance(p[7], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[7]["ref"])
         elif p[7] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[7].ref)
         else:
@@ -3092,6 +3127,8 @@ class CParser(PLYParser):
         if isinstance(p[4], list):
             length = len(p[4])
             edge = pydot.Edge("node_"+str(counter-1), p[4][length-1])
+        elif isinstance(p[4], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[4]["ref"])
         elif p[4] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
         else:
@@ -3102,6 +3139,8 @@ class CParser(PLYParser):
         if isinstance(p[6], list):
             length = len(p[6])
             edge = pydot.Edge("node_"+str(counter-1), p[6][length-1])
+        elif isinstance(p[6], dict):
+            edge = pydot.Edge("node_"+str(counter-1), p[6]["ref"])
         elif p[6] is not None:
             edge = pydot.Edge("node_"+str(counter-1), p[6].ref)
         else:
@@ -3219,6 +3258,8 @@ class CParser(PLYParser):
             if isinstance(p[1], list):
                 length = len(p[1])
                 edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
+            elif isinstance(p[1], dict):
+                edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
             elif p[1] is not None:
                 edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
             else:

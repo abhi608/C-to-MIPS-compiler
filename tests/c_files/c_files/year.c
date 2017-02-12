@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 
 void convert(int thousands, int hundreds, int tens, int ones)
 {
