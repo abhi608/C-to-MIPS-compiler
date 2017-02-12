@@ -1345,6 +1345,28 @@ class CParser(PLYParser):
         """ type_qualifier_list : type_qualifier
                                 | type_qualifier_list type_qualifier
         """
+        global counter
+        if len(p) == 2:
+            tmp_node = p[1].split("/")
+            p[1] = tmp_node[0]
+            p[0] = [p[1]]
+            graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), tmp_node[1])
+            graph.add_edge(edge)
+            p[0].append("node_"+str(counter-1))
+        else:
+            tmp_node = p[2].split("/")
+            p[2] = tmp_node[0]
+            x = p[1].pop()
+            p[0] = p[1] + [p[2]]
+            graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), x)
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), tmp_node[1])
+            graph.add_edge(edge)
+            p[0].append("node_"+str(counter-1))
         p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
 
     def p_parameter_type_list(self, p):
@@ -1355,16 +1377,68 @@ class CParser(PLYParser):
             p[1].params.append(c_ast.EllipsisParam(self._coord(p.lineno(3))))
 
         p[0] = p[1]
+        global counter
+        if len(p) == 2:
+            graph.add_node(pydot.Node('node_'+str(counter), label='parameter_type_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+            graph.add_edge(edge)
+            p[0].ref = "node_"+str(counter-1)
+        else:
+            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='ELLIPSIS'))
+            counter = counter+1  
+            graph.add_node(pydot.Node('node_'+str(counter), label='parameter_type_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            p[0].ref = "node_"+str(counter-1)
+
 
     def p_parameter_list(self, p):
         """ parameter_list  : parameter_declaration
                             | parameter_list COMMA parameter_declaration
         """
+        global counter
         if len(p) == 2: # single parameter
             p[0] = c_ast.ParamList([p[1]], p[1].coord)
+            tmp_node = ''
+            if isinstance(p[1], list):
+                length = len(p[1])
+                tmp_node = p[1][length-1]
+            else:
+                tmp_node = p[1].ref
+            graph.add_node(pydot.Node('node_'+str(counter), label='parameter_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), tmp_node)
+            graph.add_edge(edge)
+            p[0].ref = "node_"+str(counter-1)
+
         else:
             p[1].params.append(p[3])
             p[0] = p[1]
+            tmp_node = ''
+            if isinstance(p[3], list):
+                length = len(p[3])
+                tmp_node = p[3][length-1]
+            else:
+                tmp_node = p[1].ref
+            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='parameter_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge) 
+            edge = pydot.Edge("node_"+str(counter-1), tmp_node)
+            graph.add_edge(edge)
+            p[0].ref = "node_"+str(counter-1)
 
     def p_parameter_declaration_1(self, p):
         """ parameter_declaration   : declaration_specifiers declarator
@@ -1376,6 +1450,14 @@ class CParser(PLYParser):
         p[0] = self._build_declarations(
             spec=spec,
             decls=[dict(decl=p[2])])[0]
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='parameter_declaration'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        graph.add_edge(edge) 
+        p[0].append("node_"+str(counter-1))
 
     def p_parameter_declaration_2(self, p):
         """ parameter_declaration   : declaration_specifiers abstract_declarator_opt
@@ -1389,11 +1471,23 @@ class CParser(PLYParser):
         # the parameter's name gets grouped into declaration_specifiers, making
         # it look like an old-style declaration; compensate.
         #
+        global counter
         if len(spec['type']) > 1 and len(spec['type'][-1].names) == 1 and \
                 self._is_type_in_scope(spec['type'][-1].names[0]):
             decl = self._build_declarations(
                     spec=spec,
                     decls=[dict(decl=p[2], init=None)])[0]
+            p[0] = decl
+            graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator_opt'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='parameter_declaration'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge) 
+            p[0].append("node_"+str(counter-1))
+
 
         # This truly is an old-style parameter declaration
         #
@@ -1405,8 +1499,18 @@ class CParser(PLYParser):
                 coord=self._coord(p.lineno(2)))
             typename = spec['type']
             decl = self._fix_decl_name_type(decl, typename)
+            p[0] = decl
+            graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator_opt'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='parameter_declaration'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge) 
+            p[0].ref = "node_"+str(counter-1)
 
-        p[0] = decl
+        
 
     def p_identifier_list(self, p):
         """ identifier_list : identifier
