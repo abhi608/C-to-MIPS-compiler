@@ -1020,7 +1020,24 @@ class CParser(PLYParser):
         """ struct_or_union : STRUCT
                             | UNION
         """
+        global counter
         p[0] = p[1]
+        if p[1] == 'struct':
+            graph.add_node(pydot.Node('node_'+str(counter), label='STRUCT'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            p[0] = p[0] + '/node_'+str(counter-1)
+        else:
+            graph.add_node(pydot.Node('node_'+str(counter), label='UNION'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='struct_or_union'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            p[0] = p[0] + '/node_'+str(counter-1)
 
     # Combine all declarations into a single list
     #
@@ -1028,10 +1045,39 @@ class CParser(PLYParser):
         """ struct_declaration_list     : struct_declaration
                                         | struct_declaration_list struct_declaration
         """
+        global counter
         if len(p) == 2:
+            tmp_node = ''
+            if len(p[1]) == 1:
+                tmp_node = p[1][0]
+                p[1] = None
+            else:
+                length = len(p[1])
+                tmp_node = p[1][length-1]
             p[0] = p[1] or []
+            graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), tmp_node)
+            graph.add_edge(edge)
+            p[0].append('node_'+str(counter-1))
         else:
+            tmp_node = ''
+            if len(p[2]) == 1:
+                tmp_node = p[2][0]
+                p[2] = None
+            else:
+                length = len(p[2])
+                tmp_node = p[2][length-1]
+            x = p[1].pop()
             p[0] = p[1] + (p[2] or [])
+            graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), x)
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), tmp_node)
+            graph.add_edge(edge)
+            p[0].append('node_'+str(counter-1))
+            
 
     def p_struct_declaration_1(self, p):
         """ struct_declaration : specifier_qualifier_list struct_declarator_list_opt SEMI
@@ -1070,6 +1116,20 @@ class CParser(PLYParser):
                 decls=[dict(decl=None, init=None)])
 
         p[0] = decls
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator_list_opt'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].append('node_'+str(counter-1))
 
     def p_struct_declaration_2(self, p):
         """ struct_declaration : specifier_qualifier_list abstract_declarator SEMI
@@ -1084,6 +1144,18 @@ class CParser(PLYParser):
         p[0] = self._build_declarations(
                 spec=p[1],
                 decls=[dict(decl=p[2], init=None)])
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='SEMI'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='struct_declaration'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].append('node_'+str(counter-1))
 
     def p_struct_declaration_3(self, p):
         """ struct_declaration : SEMI
@@ -1096,13 +1168,37 @@ class CParser(PLYParser):
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         graph.add_edge(edge)
-        p[0] = 'ref/node_'+str(counter-1);
+        p[0] = ['node_'+str(counter-1)]
 
     def p_struct_declarator_list(self, p):
         """ struct_declarator_list  : struct_declarator
                                     | struct_declarator_list COMMA struct_declarator
         """
+        global counter
+        if len(p) == 4:
+            p[0] = p[1] + [p[3]]
+            length = len(p[1])
+            graph.add_node(pydot.Node('node_'+str(counter), label='COMMA'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), p[1][length-1])
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), p[3]["ref"])
+            graph.add_edge(edge)
+            p[0].append("node_"+str(counter-1))
+        else:
+            p[0] = [p[1]]
+            graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator_list'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
+            graph.add_edge(edge)
+            p[0].append("node_"+str(counter-1))
+
         p[0] = p[1] + [p[3]] if len(p) == 4 else [p[1]]
+
 
     # struct_declarator passes up a dict with the keys: decl (for
     # the underlying declarator) and bitsize (for the bitsize)
@@ -1110,16 +1206,43 @@ class CParser(PLYParser):
     def p_struct_declarator_1(self, p):
         """ struct_declarator : declarator
         """
+        global counter
         p[0] = {'decl': p[1], 'bitsize': None}
+        graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator'))
+        counter = counter+1
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        p[0]["ref"] = "node_"+str(counter-1)
 
     def p_struct_declarator_2(self, p):
         """ struct_declarator   : declarator COLON constant_expression
                                 | COLON constant_expression
         """
+        global counter
         if len(p) > 3:
             p[0] = {'decl': p[1], 'bitsize': p[3]}
+            graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+            graph.add_edge(edge)
+            p[0]["ref"] = "node_"+str(counter-1)
         else:
             p[0] = {'decl': c_ast.TypeDecl(None, None, None), 'bitsize': p[2]}
+            graph.add_node(pydot.Node('node_'+str(counter), label='COLON'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='struct_declarator'))
+            counter = counter+1
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+            graph.add_edge(edge)
+            p[0]["ref"] = "node_"+str(counter-1)
 
     def p_enum_specifier_1(self, p):
         """ enum_specifier  : ENUM ID
