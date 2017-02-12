@@ -13,17 +13,18 @@ import sys
 # This is not required if you've installed pycparser into
 # your site-packages/ with setup.py
 #
-sys.path.extend(['.', '..'])
+sys.path.extend(['.', '..', '../..', "../../.."])
 import pydot
 from pycparser import parse_file
 
 
 if __name__ == "__main__":
 	graph = pydot.Dot(graph_type='digraph')
-	if len(sys.argv) > 1:
-		filename  = sys.argv[1]
+	if len(sys.argv) > 1 and sys.argv[1] == "-f":
+		filename  = sys.argv[2]
 	else:
-		filename = 'examples/c_files/text2.c'
+		filename = ""
+		# filename = 'examples/c_files/text2.c'
 	ast, graph_returned = parse_file(filename, use_cpp=True,
             cpp_path='cpp',
             cpp_args=r'-Iutils/fake_libc_include',
