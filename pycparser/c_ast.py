@@ -70,6 +70,7 @@ class Node(object):
         buf.write('\n')
 
         for (child_name, child) in self.children():
+            # print "inside show: " , child_name, child
             child.show(
                 buf,
                 offset=offset + 2,

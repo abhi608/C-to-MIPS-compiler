@@ -14,17 +14,18 @@ import sys
 # your site-packages/ with setup.py
 #
 sys.path.extend(['.', '..'])
-
+import pydot
 from pycparser import parse_file
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        filename  = sys.argv[1]
-    else:
-        filename = 'examples/c_files/year.c'
-
-    ast = parse_file(filename, use_cpp=True,
+	graph = pydot.Dot(graph_type='digraph')
+	if len(sys.argv) > 1:
+		filename  = sys.argv[1]
+	else:
+		filename = 'examples/c_files/year.c'
+	ast = parse_file(filename, use_cpp=True,
             cpp_path='cpp',
             cpp_args=r'-Iutils/fake_libc_include')
-    ast.show(showcoord=True)
+	graph.write_png('test2.png')
+	# ast.show(showcoord=True)
