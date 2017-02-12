@@ -1235,6 +1235,21 @@ class CParser(PLYParser):
         """ direct_declarator   : LPAREN declarator RPAREN
         """
         p[0] = p[2]
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+        counter = counter+1
+        
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = "node_" + str(counter-1)
 
     def p_direct_declarator_3(self, p):
         """ direct_declarator   : direct_declarator LBRACKET type_qualifier_list_opt assignment_expression_opt RBRACKET
@@ -1250,7 +1265,32 @@ class CParser(PLYParser):
             ref = 'tmp')
 
         p[0] = self._type_modify_decl(decl=p[1], modifier=arr)
+        global counter
+        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list_opt'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='assignment_expression_opt'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+        counter = counter+1
 
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-5))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = "node_" + str(counter-1)
+   
+
+        
     def p_direct_declarator_4(self, p):
         """ direct_declarator   : direct_declarator LBRACKET STATIC type_qualifier_list_opt assignment_expression RBRACKET
                                 | direct_declarator LBRACKET type_qualifier_list STATIC assignment_expression RBRACKET
@@ -1269,6 +1309,55 @@ class CParser(PLYParser):
             coord=p[1].coord)
 
         p[0] = self._type_modify_decl(decl=p[1], modifier=arr)
+        global counter
+        if isinstance(p[3], str):
+            graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='STATIC'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list_opt'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+            counter = counter+1
+
+            edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-5))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+        else:
+            graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='STATIC'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+            counter = counter+1
+
+            edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
+            graph.add_edge(edge)
+            length = len(p[3])
+            edge = pydot.Edge("node_"+str(counter-1), p[3][length-1])
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)
+        p[0].ref = "node_" + str(counter-1)
 
     # Special for VLAs
     #
@@ -1281,8 +1370,31 @@ class CParser(PLYParser):
             dim_quals=p[3] if p[3] != None else [],
             coord=p[1].coord)
 
+        global counter
         p[0] = self._type_modify_decl(decl=p[1], modifier=arr)
+        graph.add_node(pydot.Node('node_'+str(counter), label='LBRACKET'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list_opt'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
+        counter = counter+1    
+        graph.add_node(pydot.Node('node_'+str(counter), label='RBRACKET'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+        counter = counter+1
 
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-5))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = "node_"  + str(counter-1)
+        
     def p_direct_declarator_6(self, p):
         """ direct_declarator   : direct_declarator LPAREN parameter_type_list RPAREN
                                 | direct_declarator LPAREN identifier_list_opt RPAREN
@@ -1310,6 +1422,25 @@ class CParser(PLYParser):
                     self._add_identifier(param.name, param.coord)
 
         p[0] = self._type_modify_decl(decl=p[1], modifier=func)
+        graph.add_node(pydot.Node('node_'+str(counter), label='LPAREN'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='identifier_list_opt'))
+        counter = counter+1
+        graph.add_node(pydot.Node('node_'+str(counter), label='RPAREN'))
+        counter = counter+1    
+        graph.add_node(pydot.Node('node_'+str(counter), label='direct_declarator'))
+        counter = counter+1
+        
+        edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-4))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+        graph.add_edge(edge)
+        edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+        graph.add_edge(edge)
+        p[0].ref = "node_" + str(counter-1)
+        
 
     def p_pointer(self, p):
         """ pointer : TIMES type_qualifier_list_opt
@@ -1332,15 +1463,43 @@ class CParser(PLYParser):
         # So when we construct PtrDecl nestings, the leftmost pointer goes in
         # as the most nested type.
         nested_type = c_ast.PtrDecl(quals=p[2] or [], type=None, coord=coord)
+        global counter
         if len(p) > 3:
             tail_type = p[3]
             while tail_type.type is not None:
                 tail_type = tail_type.type
             tail_type.type = nested_type
             p[0] = p[3]
+            graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list_opt'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='pointer'))
+            counter = counter+1
+
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)            
+            edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
+            graph.add_edge(edge)
+            
         else:
             p[0] = nested_type
+            graph.add_node(pydot.Node('node_'+str(counter), label='TIMES'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='type_qualifier_list_opt'))
+            counter = counter+1
+            graph.add_node(pydot.Node('node_'+str(counter), label='pointer'))
+            counter = counter+1
 
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-3))
+            graph.add_edge(edge)
+            edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
+            graph.add_edge(edge)            
+
+        p[0].ref = "node_" + str(counter-1)
+        
     def p_type_qualifier_list(self, p):
         """ type_qualifier_list : type_qualifier
                                 | type_qualifier_list type_qualifier
