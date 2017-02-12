@@ -92,6 +92,7 @@ def fix_switch_cases(switch_node):
                 last_case.stmts.append(child)
 
     switch_node.stmt = new_compound
+    switch_node.ref = 'tmp'
     return switch_node
 
 
