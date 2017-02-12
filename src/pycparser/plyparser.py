@@ -45,7 +45,7 @@ class PLYParser(object):
             if isinstance(p[1], list):
                 length = len(p[1])
                 print "listtttttt" , p[1]
-                edge = pydot.Edge("node_"+str(counter), "p[1][length-1]")
+                edge = pydot.Edge("node_"+str(counter), "test_node") #p[1][length-1]
                 p[0].append("node_" + str(counter))
                 print "LISTTTTTTTTTT", p[0]
                 self.graph.add_edge(edge)
