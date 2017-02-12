@@ -114,6 +114,7 @@ class CParser(PLYParser):
         global counter
         for rule in rules_with_opt:
             counter = self._create_opt_rule(rule, counter)
+            print "xxxxxxxxxxxxxxxxxx ", rule
 
         self.cparser = yacc.yacc(
             module=self,
@@ -542,6 +543,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), x)
             self.graph.add_edge(edge)
             p[0].ref = 'node_'+str(counter-1)
+        print "function-1: ", counter
 
     def p_translation_unit_1(self, p):
         """ translation_unit    : external_declaration
@@ -556,7 +558,7 @@ class CParser(PLYParser):
         edge = pydot.Edge('node_'+str(counter-1), p[1][length-1])
         self.graph.add_edge(edge)
         p[0][length-1] = 'node_'+str(counter-1)
-
+        print "function-2: ", counter
 
     def p_translation_unit_2(self, p):
         """ translation_unit    : translation_unit external_declaration
@@ -574,7 +576,7 @@ class CParser(PLYParser):
         edge = pydot.Edge('node_'+str(counter-1), y)
         self.graph.add_edge(edge)
         p[0].append('node_'+str(counter-1)) 
-
+        print "function-3: ", counter
     # Declarations always come as lists (because they can be
     # several in one line), so we wrap the function definition
     # into a list as well, to make the return value of
@@ -590,6 +592,7 @@ class CParser(PLYParser):
         edge = pydot.Edge('node_'+str(counter-1), p[1].ref)
         self.graph.add_edge(edge)
         p[0].append('node_'+str(counter-1)) 
+        print "function-4: ", counter
 
     def p_external_declaration_2(self, p):
         """ external_declaration    : declaration
@@ -603,6 +606,7 @@ class CParser(PLYParser):
         edge = pydot.Edge('node_'+str(counter-1), p[1][length-1])
         self.graph.add_edge(edge)
         p[0][length-1] = 'node_'+str(counter-1)
+        print "function-5: ", counter
 
     def p_external_declaration_3(self, p):
         """ external_declaration    : pp_directive
@@ -611,6 +615,7 @@ class CParser(PLYParser):
         p[0] = [p[1]]
         self._parse_error('Directives not supported yet',
                           self._coord(p.lineno(1)))
+        print "function-6: ", counter
 
     def p_external_declaration_4(self, p):
         """ external_declaration    : SEMI
@@ -625,12 +630,14 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0] = ['@node_'+str(counter-1)];
+        print "function-7: ", counter
 
     def p_pp_directive(self, p):
         """ pp_directive  : PPHASH
         """
         self._parse_error('Directives not supported yet',
                           self._coord(p.lineno(1)))
+        print "function-8: ", counter
 
     def p_pppragma_directive(self, p):
         """ pppragma_directive      : PPPRAGMA
@@ -659,6 +666,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
             self.graph.add_edge(edge)
             p[0].ref = 'node_'+str(counter-1)
+        print "function-9: ", counter
 
     # In function definitions, the declarator can be followed by
     # a declaration list, for old "K&R style" function definitios.
@@ -698,6 +706,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-10: ", counter
         
         
 
@@ -733,6 +742,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-11: ", counter
 
         print "fucntion definitoon 2", type(p[0]), type(p[1]), type(p[2]), type(p[3])
     def p_statement(self, p):
@@ -752,6 +762,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+    print "function-12: ", counter
 
         
 
@@ -800,6 +811,7 @@ class CParser(PLYParser):
                     spec=spec,
                     decls=[dict(decl=None, init=None)],
                     typedef_namespace=True)
+        
 
         else:
             decls = self._build_declarations(
@@ -824,6 +836,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "empty")
         self.graph.add_edge(edge)
         p[0].append("node_" + str(counter-1))
+        print "function-13: ", counter
 
 
     # The declaration has been split to a decl_body sub-rule and
@@ -856,6 +869,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_" + str(counter-2))
         self.graph.add_edge(edge)
         p[0].append("node_" + str(counter-1))
+        print "function-14: ", counter
         
         
     # Since each declaration is a list of declarations, this
@@ -884,6 +898,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[2][length-1])
             self.graph.add_edge(edge)
         p[0].append("node_" + str(counter-1))
+        print "function-15: ", counter
 
     def p_declaration_specifiers_1(self, p):
         """ declaration_specifiers  : type_qualifier declaration_specifiers_opt
@@ -907,6 +922,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "empty")
         self.graph.add_edge(edge)
         p[0]["ref"] = "node_" + str(counter-1)
+        print "function-16: ", counter
 
     def p_declaration_specifiers_2(self, p):
         """ declaration_specifiers  : type_specifier declaration_specifiers_opt
@@ -930,6 +946,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "empty")
         self.graph.add_edge(edge)
         p[0]["ref"] = "node_" + str(counter-1)
+        print "function-17: ", counter
 
     def p_declaration_specifiers_3(self, p):
         """ declaration_specifiers  : storage_class_specifier declaration_specifiers_opt
@@ -953,6 +970,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "empty")
         self.graph.add_edge(edge)
         p[0]["ref"] = "node_" + str(counter-1)
+        print "function-18: ", counter
 
     def p_declaration_specifiers_4(self, p):
         """ declaration_specifiers  : function_specifier declaration_specifiers_opt
@@ -976,6 +994,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "empty")
         self.graph.add_edge(edge)
         p[0]["ref"] = "node_" + str(counter-1)
+        print "function-19: ", counter
 
     def p_storage_class_specifier(self, p):
         """ storage_class_specifier : AUTO
@@ -1003,7 +1022,8 @@ class CParser(PLYParser):
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
-        p[0] = p[0] + '@node_' + str(counter-1);
+        p[0] = p[0] + '@node_' + str(counter-1)
+        print "function-20: ", counter
 
 
     def p_function_specifier(self, p):
@@ -1017,7 +1037,8 @@ class CParser(PLYParser):
         counter = counter+1
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
-        p[0] = p[0] + '@node_' + str(counter-1);
+        p[0] = p[0] + '@node_' + str(counter-1)
+        print "function-21: ", counter
 
 
     def p_type_specifier_1(self, p):
@@ -1068,6 +1089,7 @@ class CParser(PLYParser):
         self.graph.add_edge(edge)
         p[0].ref = "node_"+str(counter-1)
         # print "TEDSTKJJ ", p[1]
+        print "function-22: ", counter
 
     def p_type_specifier_2(self, p):
         """ type_specifier  : typedef_name
@@ -1081,6 +1103,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge)
         p[0].ref = "node_"+str(counter-1)
+        print "function-23: ", counter
 
     def p_type_qualifier(self, p):
         """ type_qualifier  : CONST
@@ -1102,6 +1125,7 @@ class CParser(PLYParser):
         self.graph.add_edge(edge)
         p[0] = p[0] + '@node_' + str(counter-1)
         # print "TERSR ",p[1];
+        print "function-24: ", counter
 
     def p_init_declarator_list_1(self, p):
         """ init_declarator_list    : init_declarator
@@ -1128,6 +1152,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[3]["ref"])
             self.graph.add_edge(edge)
             p[0].append("node_"+str(counter-1))
+        print "function-25: ", counter
 
     # If the code is declaring a variable that was declared a typedef in an
     # outer scope, yacc will think the name is part of declaration_specifiers,
@@ -1147,6 +1172,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         self.graph.add_edge(edge)
         p[0].append("node_"+str(counter-1))
+        print "function-26: ", counter
 
     # Similarly, if the code contains duplicate typedefs of, for example,
     # array types, the array portion will appear as an abstract declarator.
@@ -1160,6 +1186,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge)
         p[0].append("node_"+str(counter-1))
+        print "function-27: ", counter
 
     # Returns a {decl=<declarator> : init=<initializer>} dictionary
     # If there's no initializer, uses None
@@ -1188,6 +1215,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
             self.graph.add_edge(edge)
             p[0]["ref"] = "node_"+str(counter-1)
+        print "function-28: ", counter
 
     def p_specifier_qualifier_list_1(self, p):
         """ specifier_qualifier_list    : type_qualifier specifier_qualifier_list_opt
@@ -1211,6 +1239,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "empty")
         self.graph.add_edge(edge)
         p[0]["ref"] = "node_"+str(counter-1)
+        print "function-29: ", counter
 
     def p_specifier_qualifier_list_2(self, p):
         """ specifier_qualifier_list    : type_specifier specifier_qualifier_list_opt
@@ -1232,6 +1261,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "empty")
         self.graph.add_edge(edge)
         p[0]["ref"] = "node_"+str(counter-1)
+        print "function-30: ", counter
 
     # TYPEID is allowed here (and in other struct/enum related tag names), because
     # struct/enum tags reside in their own namespace and can be named the same as types
@@ -1257,6 +1287,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = "node_"+str(counter-1)
+        print "function-31: ", counter
         
 
     def p_struct_or_union_specifier_2(self, p):
@@ -1286,6 +1317,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), tmp_node3[1])
         self.graph.add_edge(edge)
         p[0].ref = "node_"+str(counter-1)
+        print "function-32: ", counter
 
     def p_struct_or_union_specifier_3(self, p):
         """ struct_or_union_specifier   : struct_or_union ID brace_open struct_declaration_list brace_close
@@ -1320,6 +1352,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), tmp_node3[1])
         self.graph.add_edge(edge)
         p[0].ref = "node_"+str(counter-1)
+        print "function-33: ", counter
 
 
     def p_struct_or_union(self, p):
@@ -1344,6 +1377,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
             self.graph.add_edge(edge)
             p[0] = p[0] + '@node_'+str(counter-1)
+        print "function-34: ", counter
 
     # Combine all declarations into a single list
     #
@@ -1383,6 +1417,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), tmp_node)
             self.graph.add_edge(edge)
             p[0].append('node_'+str(counter-1))
+        print "function-35: ", counter
             
 
     def p_struct_declaration_1(self, p):
@@ -1442,6 +1477,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].append('node_'+str(counter-1))
+        print "function-36: ", counter
 
     def p_struct_declaration_2(self, p):
         """ struct_declaration : specifier_qualifier_list abstract_declarator SEMI
@@ -1468,6 +1504,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].append('node_'+str(counter-1))
+        print "function-37: ", counter
 
     def p_struct_declaration_3(self, p):
         """ struct_declaration : SEMI
@@ -1481,6 +1518,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0] = ['node_'+str(counter-1)]
+        print "function-38: ", counter
 
     def p_struct_declarator_list(self, p):
         """ struct_declarator_list  : struct_declarator
@@ -1508,8 +1546,10 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[1]["ref"])
             self.graph.add_edge(edge)
             p[0].append("node_"+str(counter-1))
+            print "p[0]", p[0]
 
-        p[0] = p[1] + [p[3]] if len(p) == 4 else [p[1]]
+        # p[0] = p[1] + [p[3]] if len(p) == 4 else [p[1]]
+        print "function-39: ", counter
 
 
     # struct_declarator passes up a dict with the keys: decl (for
@@ -1525,6 +1565,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge)
         p[0]["ref"] = "node_"+str(counter-1)
+        print "function-40: ", counter
 
     def p_struct_declarator_2(self, p):
         """ struct_declarator   : declarator COLON constant_expression
@@ -1555,6 +1596,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
             self.graph.add_edge(edge)
             p[0]["ref"] = "node_"+str(counter-1)
+        print "function-41: ", counter
 
     def p_enum_specifier_1(self, p):
         """ enum_specifier  : ENUM ID
@@ -1574,6 +1616,7 @@ class CParser(PLYParser):
         self.graph.add_edge(edge)
         p[0].ref = "node_"+str(counter-1)
         print "QWERTY: ", p[2]
+        print "function-42: ", counter
 
     def p_enum_specifier_2(self, p):
         """ enum_specifier  : ENUM brace_open enumerator_list brace_close
@@ -1597,6 +1640,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1]) 
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-43: ", counter
         
 
     def p_enum_specifier_3(self, p):
@@ -1627,6 +1671,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1]) 
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-44: ", counter
                 
 
     def p_enumerator_list(self, p):
@@ -1667,6 +1712,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
             self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-45: ", counter
 
             
     def p_enumerator(self, p):
@@ -1706,6 +1752,7 @@ class CParser(PLYParser):
 
         p[0] = enumerator
         p[0].ref = 'node_' + str(counter-1)
+        print "function-46: ", counter
 
     def p_declarator_1(self, p):
         """ declarator  : direct_declarator
@@ -1717,6 +1764,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-47: ", counter
         
     def p_declarator_2(self, p):
         """ declarator  : pointer direct_declarator
@@ -1730,6 +1778,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-48: ", counter
         
     # Since it's impossible for a type to be specified after a pointer, assume
     # it's intended to be the name for this declaration.  _add_identifier will
@@ -1755,6 +1804,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-49: ", counter
         
     def p_direct_declarator_1(self, p):
         """ direct_declarator   : ID
@@ -1772,6 +1822,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
+        print "function-50: ", counter
 
     def p_direct_declarator_2(self, p):
         """ direct_declarator   : LPAREN declarator RPAREN
@@ -1792,6 +1843,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-51: ", counter
 
     def p_direct_declarator_3(self, p):
         """ direct_declarator   : direct_declarator LBRACKET type_qualifier_list_opt assignment_expression_opt RBRACKET
@@ -1842,6 +1894,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-52: ", counter
    
 
         
@@ -1918,6 +1971,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
             self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-53: ", counter
 
     # Special for VLAs
     #
@@ -1960,6 +2014,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = "node_"  + str(counter-1)
+        print "function-54: ", counter
         
     def p_direct_declarator_6(self, p):
         """ direct_declarator   : direct_declarator LPAREN parameter_type_list RPAREN
@@ -2013,6 +2068,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-55: ", counter
         
 
     def p_pointer(self, p):
@@ -2084,6 +2140,7 @@ class CParser(PLYParser):
             self.graph.add_edge(edge)            
 
         p[0].ref = "node_" + str(counter-1)
+        print "function-56: ", counter
         
     def p_type_qualifier_list(self, p):
         """ type_qualifier_list : type_qualifier
@@ -2112,6 +2169,7 @@ class CParser(PLYParser):
             self.graph.add_edge(edge)
             p[0].append("node_"+str(counter-1))
         p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
+        print "function-57: ", counter
 
     def p_parameter_type_list(self, p):
         """ parameter_type_list : parameter_list
@@ -2142,6 +2200,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
             self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
+        print "function-58: ", counter
 
 
     def p_parameter_list(self, p):
@@ -2183,6 +2242,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), tmp_node)
             self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
+        print "function-59: ", counter
 
     def p_parameter_declaration_1(self, p):
         """ parameter_declaration   : declaration_specifiers declarator
@@ -2206,6 +2266,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-60: ", counter
 
     def p_parameter_declaration_2(self, p):
         """ parameter_declaration   : declaration_specifiers abstract_declarator_opt
@@ -2269,6 +2330,7 @@ class CParser(PLYParser):
                 edge = pydot.Edge("node_"+str(counter-1), "empty")
             self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
+        print "function-61: ", counter
 
         
 
@@ -2298,6 +2360,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
             self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
+        print "function-62: ", counter
 
     def p_initializer_1(self, p):
         """ initializer : assignment_expression
@@ -2310,6 +2373,7 @@ class CParser(PLYParser):
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)           
         # print p[0]
+        print "function-63: ", counter
 
     def p_initializer_2(self, p):
         """ initializer : brace_open initializer_list_opt brace_close
@@ -2361,6 +2425,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
             self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
+        print "function-64: ", counter
 
     def p_initializer_list(self, p):
         """ initializer_list    : designation_opt initializer
@@ -2411,6 +2476,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
             self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
+        print "function-65: ", counter
 
 
     def p_designation(self, p):
@@ -2424,7 +2490,8 @@ class CParser(PLYParser):
         self.graph.add_edge(edge)
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
-        p[0][length-1] = "node_"+str(counter-1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+        p[0][length-1] = "node_"+str(counter-1)   
+        print "function-66: ", counter                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
 
     # Designators are represented as a list of nodes, in the order in which
     # they're written in the code.
@@ -2448,6 +2515,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
             self.graph.add_edge(edge)            
             p[0].append('node_' + str(counter-1))
+        print "function-67: ", counter
 
     def p_designator(self, p):
         """ designator  : LBRACKET constant_expression RBRACKET
@@ -2478,7 +2546,8 @@ class CParser(PLYParser):
             self.graph.add_edge(edge)
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
             self.graph.add_edge(edge)
-        p[0].ref = 'node_' + str(counter-1)        
+        p[0].ref = 'node_' + str(counter-1)  
+        print "function-68: ", counter      
 
 
     def p_type_name(self, p):
@@ -2508,6 +2577,7 @@ class CParser(PLYParser):
         self.graph.add_edge(edge)
         p[0].ref = "node_"+str(counter-1);
         # dictionary problems - specifier_qualifier_list is a dict
+        print "function-69: ", counter
 
 
     def p_abstract_declarator_1(self, p):
@@ -2517,6 +2587,7 @@ class CParser(PLYParser):
         p[0] = self._type_modify_decl(
             decl=dummytype,
             modifier=p[1])
+        print "qqqqqqqqqqqqqqqqqqqqqqqq", type(p[0])
         global counter
         self.graph.add_node(pydot.Node('node_'+str(counter), label='abstract_declarator'))
         counter = counter+1
@@ -2524,6 +2595,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
+        print "function-70: ", counter
 
     def p_abstract_declarator_2(self, p):
         """ abstract_declarator     : pointer direct_abstract_declarator
@@ -2538,6 +2610,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
         self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
+        print "function-71: ", counter
 
     def p_abstract_declarator_3(self, p):
         """ abstract_declarator     : direct_abstract_declarator
@@ -2549,6 +2622,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
+        print "function-72: ", counter
 
     # Creating and using direct_abstract_declarator_opt here
     # instead of listing both direct_abstract_declarator and the
@@ -2573,6 +2647,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
+        print "function-73: ", counter
 
     def p_direct_abstract_declarator_2(self, p):
         """ direct_abstract_declarator  : direct_abstract_declarator LBRACKET assignment_expression_opt RBRACKET
@@ -2609,6 +2684,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
+        print "function-74: ", counter
 
 
     def p_direct_abstract_declarator_3(self, p):
@@ -2642,6 +2718,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
+        print "function-75: ", counter
 
 
     def p_direct_abstract_declarator_4(self, p):
@@ -2674,6 +2751,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
+        print "function-76: ", counter
 
 
     def p_direct_abstract_declarator_5(self, p):
@@ -2700,6 +2778,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = 'node_' + str(counter-1)
+        print "function-77: ", counter
 
     def p_direct_abstract_declarator_6(self, p):
         """ direct_abstract_declarator  : direct_abstract_declarator LPAREN parameter_type_list_opt RPAREN
@@ -2736,6 +2815,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-78: ", counter
 
     def p_direct_abstract_declarator_7(self, p):
         """ direct_abstract_declarator  : LPAREN parameter_type_list_opt RPAREN
@@ -2767,6 +2847,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref = "node_" + str(counter-1)
+        print "function-79: ", counter
 
 
     # declaration is a list, statement isn't. To make it consistent, block_item
@@ -2791,6 +2872,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
             self.graph.add_edge(edge)
             p[0].append("node_"+str(counter-1))
+        print "function-80: ", counter
 
     # Since we made block_item a list, this just combines lists
     #
@@ -2821,6 +2903,7 @@ class CParser(PLYParser):
             p[0] = p[1] + p[2]
             length = len(p[0])
             p[0][length-1] = "node_"+str(counter-1)
+        print "function-81: ", counter
 
 
     def p_compound_statement_1(self, p):
@@ -2850,6 +2933,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-82: ", counter
 
     def p_labeled_statement_1(self, p):
         """ labeled_statement : ID COLON statement """
@@ -2868,6 +2952,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-83: ", counter
 
     def p_labeled_statement_2(self, p):
         """ labeled_statement : CASE constant_expression COLON statement """
@@ -2888,6 +2973,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-84: ", counter
 
     def p_labeled_statement_3(self, p):
         """ labeled_statement : DEFAULT COLON statement """
@@ -2906,6 +2992,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-85: ", counter
 
     def p_selection_statement_1(self, p):
         """ selection_statement : IF LPAREN expression RPAREN statement """
@@ -2930,6 +3017,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-86: ", counter
 
     def p_selection_statement_2(self, p):
         """ selection_statement : IF LPAREN expression RPAREN statement ELSE statement """
@@ -2960,6 +3048,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[7].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-87: ", counter
 
     def p_selection_statement_3(self, p):
         """ selection_statement : SWITCH LPAREN expression RPAREN statement """
@@ -2985,6 +3074,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-88: ", counter
 
     def p_iteration_statement_1(self, p):
         """ iteration_statement : WHILE LPAREN expression RPAREN statement """
@@ -3009,6 +3099,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-89: ", counter
 
     def p_iteration_statement_2(self, p):
         """ iteration_statement : DO statement WHILE LPAREN expression RPAREN SEMI """
@@ -3041,6 +3132,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-90: ", counter
 
     def p_iteration_statement_3(self, p):
         """ iteration_statement : FOR LPAREN expression_opt SEMI expression_opt SEMI expression_opt RPAREN statement """
@@ -3101,6 +3193,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[9].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-91: ", counter
 
     def p_iteration_statement_4(self, p):
         """ iteration_statement : FOR LPAREN declaration expression_opt SEMI expression_opt RPAREN statement """
@@ -3151,6 +3244,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[8].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-92: ", counter
 
     def p_jump_statement_1(self, p):
         """ jump_statement  : GOTO ID SEMI """
@@ -3171,6 +3265,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-93: ", counter
 
     def p_jump_statement_2(self, p):
         """ jump_statement  : BREAK SEMI """
@@ -3187,6 +3282,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-94: ", counter
 
     def p_jump_statement_3(self, p):
         """ jump_statement  : CONTINUE SEMI """
@@ -3203,6 +3299,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-95: ", counter
 
     def p_jump_statement_4(self, p):
         """ jump_statement  : RETURN expression SEMI
@@ -3236,6 +3333,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
             self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
+        print "function-96: ", counter
 
     def p_expression_statement(self, p):
         """ expression_statement : expression_opt SEMI """
@@ -3268,6 +3366,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
             self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
+        print "function-97: ", counter
 
     def p_expression(self, p):
         """ expression  : assignment_expression
@@ -3298,6 +3397,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
             self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
+        print "function-98: ", counter
 
     def p_typedef_name(self, p):
         """ typedef_name : TYPEID """
@@ -3311,6 +3411,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-99: ", counter
 
     def p_assignment_expression(self, p):
         """ assignment_expression   : conditional_expression
@@ -3337,6 +3438,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
             self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
+        print "function-100: ", counter
 
     # K&R2 defines these as many separate rules, to encode
     # precedence and associativity. Why work hard ? I'll just use
@@ -3446,7 +3548,8 @@ class CParser(PLYParser):
             counter = counter+1
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
             self.graph.add_edge(edge) 
-            p[0] = p[0] + '@node_'+str(counter-1)     
+            p[0] = p[0] + '@node_'+str(counter-1)  
+        print "function-101: ", counter   
     
 
     def p_constant_expression(self, p):
@@ -3458,6 +3561,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-102: ", counter
 
     def p_conditional_expression(self, p):
         """ conditional_expression  : binary_expression
@@ -3490,6 +3594,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[5].ref)
             self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
+        print "function-103: ", counter
 
     def p_binary_expression(self, p):
         """ binary_expression   : cast_expression
@@ -3739,6 +3844,7 @@ class CParser(PLYParser):
                 edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
                 self.graph.add_edge(edge)
                 p[0].ref = "node_"+str(counter-1)
+            print "function-104: ", counter
 
     def p_cast_expression_1(self, p):
         """ cast_expression : unary_expression """
@@ -3749,6 +3855,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-105: ", counter
 
     def p_cast_expression_2(self, p):
         """ cast_expression : LPAREN type_name RPAREN cast_expression """
@@ -3769,6 +3876,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[4].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-106: ", counter
 
     def p_unary_expression_1(self, p):
         """ unary_expression    : postfix_expression """
@@ -3779,6 +3887,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge) 
         p[0].ref = "node_"+str(counter-1)
+        print "function-107: ", counter
 
     def p_unary_expression_2(self, p):
         """ unary_expression    : PLUSPLUS unary_expression
@@ -3819,7 +3928,8 @@ class CParser(PLYParser):
             self.graph.add_edge(edge) 
             edge = pydot.Edge("node_"+str(counter-1), p[2].ref)
             self.graph.add_edge(edge) 
-            p[0].ref = "node_"+str(counter-1)    
+            p[0].ref = "node_"+str(counter-1)  
+        print "function-108: ", counter  
 
     def p_unary_expression_3(self, p):
         """ unary_expression    : SIZEOF unary_expression
@@ -3858,6 +3968,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
             self.graph.add_edge(edge) 
             p[0].ref = "node_"+str(counter-1)
+        print "function-109: ", counter
 
     def p_unary_operator(self, p):
         """ unary_operator  : AND
@@ -3917,6 +4028,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
             self.graph.add_edge(edge) 
             p[0] = p[0] + '@node_'+str(counter-1)
+        print "function-110: ", counter
 
     def p_postfix_expression_1(self, p):
         """ postfix_expression  : primary_expression """
@@ -3927,6 +4039,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge) 
         p[0].ref =  "node_"+str(counter-1)
+        print "function-111: ", counter
 
     def p_postfix_expression_2(self, p):
         """ postfix_expression  : postfix_expression LBRACKET expression RBRACKET """
@@ -3947,6 +4060,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge) 
         p[0].ref =  "node_"+str(counter-1)
+        print "function-112: ", counter
 
     def p_postfix_expression_3(self, p):
         """ postfix_expression  : postfix_expression LPAREN argument_expression_list RPAREN
@@ -3984,6 +4098,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
             self.graph.add_edge(edge) 
             p[0].ref =  "node_"+str(counter-1)
+        print "function-113: ", counter
 
     def p_postfix_expression_4(self, p):
         """ postfix_expression  : postfix_expression PERIOD ID
@@ -4008,6 +4123,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge) 
         p[0].ref =  "node_"+str(counter-1)
+        print "function-114: ", counter
 
     def p_postfix_expression_5(self, p):
         """ postfix_expression  : postfix_expression PLUSPLUS
@@ -4024,6 +4140,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge) 
         p[0].ref =  "node_"+str(counter-1)
+        print "function-115: ", counter
          
 
     def p_postfix_expression_6(self, p):
@@ -4079,6 +4196,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), tmp_node2[1])
             self.graph.add_edge(edge)  
         p[0].ref =  "node_"+str(counter-1)
+        print "function-116: ", counter
         
 
     def p_primary_expression_1(self, p):
@@ -4090,6 +4208,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge)      
         p[0].ref =  "node_"+str(counter-1)
+        print "function-117: ", counter
         
 
     def p_primary_expression_2(self, p):
@@ -4101,6 +4220,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge)      
         p[0].ref =  "node_"+str(counter-1)
+        print "function-118: ", counter
         
     def p_primary_expression_3(self, p):
         """ primary_expression  : unified_string_literal
@@ -4113,6 +4233,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
         self.graph.add_edge(edge)      
         p[0].ref =  "node_"+str(counter-1)
+        print "function-119: ", counter
         
 
     def p_primary_expression_4(self, p):
@@ -4133,6 +4254,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)  
         p[0].ref =  "node_"+str(counter-1)
+        print "function-120: ", counter
         
 
     def p_primary_expression_5(self, p):
@@ -4168,6 +4290,7 @@ class CParser(PLYParser):
         self.graph.add_edge(edge)
 
         p[0].ref =  "node_"+str(counter-1)
+        print "function-121: ", counter
 
 
 
@@ -4223,6 +4346,7 @@ class CParser(PLYParser):
 
         else:
             raise NotImplementedError("Unexpected parsing state. len(p): %u" % len(p))
+        print "function-122: ", counter
 
     def p_argument_expression_list(self, p):
         """ argument_expression_list    : assignment_expression
@@ -4252,6 +4376,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[3].ref)
             self.graph.add_edge(edge)
             p[0].ref =  "node_"+str(counter-1)
+        print "function-123: ", counter
 
     def p_identifier(self, p):
         """ identifier  : ID """
@@ -4265,6 +4390,7 @@ class CParser(PLYParser):
         self.graph.add_edge(edge)
         p[0].ref =  "node_"+str(counter-1)
         # print "ABHISHEK: ",p[1]
+        print "function-124: ", counter
 
     def p_constant_1(self, p):
         """ constant    : INT_CONST_DEC
@@ -4282,6 +4408,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref =  "node_"+str(counter-1)
+        print "function-125: ", counter
 
     def p_constant_2(self, p):
         """ constant    : FLOAT_CONST
@@ -4297,6 +4424,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref =  "node_"+str(counter-1)
+        print "function-126: ", counter
 
     def p_constant_3(self, p):
         """ constant    : CHAR_CONST
@@ -4313,6 +4441,7 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         p[0].ref =  "node_"+str(counter-1)
+        print "function-127: ", counter
     # The "unified" string and wstring literal rules are for supporting
     # concatenation of adjacent string literals.
     # I.e. "hello " "world" is seen by the C compiler as a single string literal
@@ -4345,6 +4474,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
             self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
+        print "function-128: ", counter
             
 
     def p_unified_wstring_literal(self, p):
@@ -4374,6 +4504,7 @@ class CParser(PLYParser):
             edge = pydot.Edge("node_"+str(counter-1), p[1].ref)
             self.graph.add_edge(edge)
             p[0].ref = "node_"+str(counter-1)
+        print "function-129: ", counter
             
 
     def p_brace_open(self, p):
@@ -4389,7 +4520,8 @@ class CParser(PLYParser):
         edge = pydot.Edge("node_"+str(counter-1), "node_"+str(counter-2))
         self.graph.add_edge(edge)
         #print "right brace printing", p[1], type(p[1])
-        p[0] = p[0] + "@node_" + str(counter-1)    
+        p[0] = p[0] + "@node_" + str(counter-1)  
+        print "function-130: ", counter  
 
     def p_brace_close(self, p):
         """ brace_close :   RBRACE
@@ -4405,6 +4537,7 @@ class CParser(PLYParser):
         self.graph.add_edge(edge)
         #print "right brace printing", p[1], type(p[1])
         p[0] = p[0] + "@node_" + str(counter-1)
+        print "function-131: ", counter
 
     def p_empty(self, p):
         'empty : '
@@ -4421,6 +4554,7 @@ class CParser(PLYParser):
                             column=self.clex.find_tok_column(p)))
         else:
             self._parse_error('At end of input', self.clex.filename)
+        print "function-132: ", counter
 
 
 #------------------------------------------------------------------------------

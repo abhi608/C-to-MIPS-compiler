@@ -26,6 +26,10 @@ if __name__ == "__main__":
 		filename  = sys.argv[2]
 		if len(sys.argv)>3 and sys.argv[3] == '-g':
 			graphname = sys.argv[4]
+	elif len(sys.argv) > 1 and sys.argv[1] == "-g":
+		graphname = sys.argv[2]
+		if len(sys.argv)>3 and sys.argv[3] == '-f':
+			filename  = sys.argv[4]
 
 		# filename = 'examples/c_files/text2.c'
 	ast, graph_returned = parse_file(filename, use_cpp=True,
