@@ -38,23 +38,39 @@ class PLYParser(object):
         """
         optname = rulename + '_opt'
         global tmp
+        print "counter is: ", counter
         def optrule(self, p):
             global tmp
             p[0] = p[1]
             self.graph.add_node(pydot.Node('node_'+str(counter), label=optname))
             if isinstance(p[1], list):
                 length = len(p[1])
-                edge = pydot.Edge("node_"+str(counter), p[1][length-1])
+                print "listtttttt" , p[1], type(p[1][length-1]), length
+                edge = pydot.Edge("node_"+str(counter), p[1][length-1]) #p[1][length-1]
                 p[0].append("node_" + str(counter))
+                print "LISTTTTTTTTTT", p[0], type(p[0]), edge
+                self.graph.add_edge(edge)
+
+            elif isinstance(p[1], dict):
+                print "is it a dictinary?", p[1]
+                edge = pydot.Edge("node_"+str(counter), p[1]["ref"])
+                p[0]["ref"] = "node_" + str(counter)
+                self.graph.add_edge(edge)
+
             elif p[1] is not None:
                 edge = pydot.Edge("node_"+str(counter), p[1].ref)
                 p[0].ref = "node_" + str(counter)
+                print "OBJECTTTTTTT"
+                self.graph.add_edge(edge)
+
             else:
                 self.graph.add_node(pydot.Node('node_'+str(tmp), label="Empty"))
                 tmp = tmp-1;
                 edge = pydot.Edge("node_"+str(counter), 'node_'+str(tmp+1))
-            self.graph.add_edge(edge)
+                self.graph.add_edge(edge)
 
+           # self.graph.add_edge(edge)
+            print "LEFTTTTTTT"
         counter = counter + 1
         optrule.__doc__ = '%s : empty\n| %s' % (optname, rulename)
         optrule.__name__ = 'p_%s' % optname
